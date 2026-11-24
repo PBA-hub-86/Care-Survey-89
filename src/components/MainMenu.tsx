@@ -28,8 +28,8 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-import bannerImg from '../assets/images/speed_tycoon_banner_1793961891406.jpg';
-import profileImg from '../assets/images/speed_tycoon_profile_1793961890654.jpg';
+import bannerImg from '../assets/images/speed_tycoon_banner_1795517835620.jpg';
+import profileImg from '../assets/images/speed_tycoon_profile_1795517836646.jpg';
 
 interface MainMenuProps {
   selectedCar: CarConfig;
@@ -120,6 +120,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 <img
                   src={profileImg}
                   alt="Driver Avatar"
+                  referrerPolicy="no-referrer"
                   className="w-9 h-9 rounded-xl border border-cyan-400 object-cover"
                 />
                 <div className="font-mono">
@@ -217,6 +218,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               <img
                 src={bannerImg}
                 alt="Highway Racing Banner"
+                referrerPolicy="no-referrer"
                 className="w-full h-24 sm:h-28 object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#030617] via-black/30 to-transparent flex items-end justify-between p-2.5">
@@ -224,6 +226,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   <img
                     src={profileImg}
                     alt="Profile Icon"
+                    referrerPolicy="no-referrer"
                     className="w-9 h-9 rounded-xl border-2 border-emerald-400 shadow-md object-cover"
                   />
                   <div className="text-left font-mono leading-tight">

@@ -18,7 +18,7 @@ import { LuckySpinModal } from './components/LuckySpinModal';
 import { GameOverModal } from './components/GameOverModal';
 import { PauseModal } from './components/PauseModal';
 
-import { saveSecure, loadSecure, initAntiCheatGuards } from './utils/security';
+import { saveSecure, loadSecure, initAntiCheatGuards, validateRunOutcome } from './utils/security';
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -109,6 +109,7 @@ export default function App() {
   const highScoreRef = useRef(highScore);
   const carsRef = useRef(cars);
   const selectedCarIndexRef = useRef(selectedCarIndex);
+  const upgradesRef = useRef(upgrades);
   const didMountCarRef = useRef(false);
   const didMountRoadRef = useRef(false);
   const didMountUpgradesRef = useRef(false);
@@ -120,6 +121,10 @@ export default function App() {
   useEffect(() => {
     carsRef.current = cars;
   }, [cars]);
+
+  useEffect(() => {
+    upgradesRef.current = upgrades;
+  }, [upgrades]);
 
   useEffect(() => {
     selectedCarIndexRef.current = selectedCarIndex;
@@ -211,10 +216,25 @@ export default function App() {
           setStats(newStats);
         },
         onCrash: () => {
-          const finalScore = Math.floor(engine.score);
-          const finalDistance = Math.floor(engine.distance);
-          const finalSpeed = Math.floor(engine.maxSpeedAchieved);
-          const earnedThisRun = engine.cashCollectedThisRun;
+          const currentCar = carsRef.current[selectedCarIndexRef.current];
+          const currentUpgrades = upgradesRef.current;
+          const validated = validateRunOutcome({
+            score: engine.score,
+            distance: engine.distance,
+            maxSpeed: engine.maxSpeedAchieved,
+            earnedCash: engine.cashCollectedThisRun,
+            nearMisses: engine.nearMisses,
+            carTopSpeed: currentCar?.topSpeed || 240,
+            carNitroBoost: currentCar?.nitroBoost || 80,
+            engineLevel: currentUpgrades.engineLevel,
+            nitroLevel: currentUpgrades.nitroLevel,
+            multiplierLevel: currentUpgrades.multiplierLevel,
+          });
+
+          const finalScore = validated.score;
+          const finalDistance = validated.distance;
+          const finalSpeed = validated.maxSpeed;
+          const earnedThisRun = validated.earnedCash;
 
           // Credit earned cash to in-game wallet
           setWalletBalance((prev) => prev + earnedThisRun);
@@ -252,10 +272,10 @@ export default function App() {
             score: finalScore,
             distance: finalDistance,
             maxSpeed: finalSpeed,
-            nearMisses: engine.nearMisses,
+            nearMisses: validated.nearMisses,
             cashEarned: earnedThisRun,
             isNewRecord: isNew,
-            carName: carsRef.current[selectedCarIndexRef.current]?.name || 'Supercar',
+            carName: currentCar?.name || 'Supercar',
           });
 
           // Check free spin reward

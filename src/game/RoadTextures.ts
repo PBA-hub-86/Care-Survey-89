@@ -69,11 +69,14 @@ export function createHighwayRoadTextureSet(
 
   const isDayOrNatural =
     theme.skyType === 'daytime' ||
-    theme.skyType === 'coastal_marine' ||
     theme.skyType === 'sahara_sunset';
+  const isWetNeon =
+    theme.skyType === 'coastal_marine' ||
+    theme.skyType === 'cyber' ||
+    theme.skyType === 'midnight_neon';
 
   const baseRgb = hexToRgb(theme.roadColor);
-  // Keep asphalt rich dark charcoal in daytime so painted lines & tire marks contrast realistically
+  // Keep asphalt rich dark charcoal in daytime and sleek wet-dark twilight on cyber/coastal roads
   const asphaltBase = isDayOrNatural
     ? {
         r: Math.max(38, Math.min(58, baseRgb.r + 14)),
@@ -81,9 +84,9 @@ export function createHighwayRoadTextureSet(
         b: Math.max(46, Math.min(68, baseRgb.b + 14)),
       }
     : {
-        r: Math.max(18, baseRgb.r + 12),
-        g: Math.max(20, baseRgb.g + 14),
-        b: Math.max(28, baseRgb.b + 18),
+        r: Math.max(14, baseRgb.r + 8),
+        g: Math.max(18, baseRgb.g + 12),
+        b: Math.max(30, baseRgb.b + 18),
       };
 
   // Base fills
@@ -93,8 +96,8 @@ export function createHighwayRoadTextureSet(
   bctx.fillStyle = 'rgb(128,128,128)';
   bctx.fillRect(0, 0, width, height);
 
-  // Higher values = clean matte/semi-sheen highway tarmac (no rain gloss)
-  rctx.fillStyle = 'rgb(200,200,200)';
+  // Glossy twilight/wet sheen on cyber & coastal highways so neon lights reflect cleanly
+  rctx.fillStyle = isWetNeon ? 'rgb(95,95,95)' : 'rgb(200,200,200)';
   rctx.fillRect(0, 0, width, height);
 
   // Map road X in [-15, +15] to canvas U in [0, width]
@@ -216,13 +219,13 @@ export function createHighwayRoadTextureSet(
   const lineARgb = hexToRgb(theme.lineColorA);
   const lineBRgb = hexToRgb(theme.lineColorB);
   const leftEdgeColor = isDayOrNatural
-    ? 'rgba(250, 204, 21, 0.92)' // Real highway yellow median edge line
-    : rgbCss(lineBRgb.r, lineBRgb.g, lineBRgb.b, 0.92);
+    ? 'rgba(250, 204, 21, 0.92)'
+    : rgbCss(lineARgb.r, lineARgb.g, lineARgb.b, 0.96);
   const rightEdgeColor = isDayOrNatural
-    ? 'rgba(248, 250, 252, 0.92)' // Real highway white shoulder edge line
-    : rgbCss(lineARgb.r, lineARgb.g, lineARgb.b, 0.92);
+    ? 'rgba(248, 250, 252, 0.92)'
+    : rgbCss(lineBRgb.r, lineBRgb.g, lineBRgb.b, 0.96);
 
-  const edgeLineW = wToPx(0.24);
+  const edgeLineW = wToPx(0.26);
   actx.fillStyle = leftEdgeColor;
   actx.fillRect(xToPx(-8.45) - edgeLineW / 2, 0, edgeLineW, height);
 
@@ -443,9 +446,13 @@ export function createTerrainTextureSet(
   let accent = '#2e5929';
   let gridLine: string | null = null;
 
-  if (theme.skyType === 'daytime' || theme.skyType === 'coastal_marine') {
+  if (theme.skyType === 'daytime') {
     bg = '#2c4c27';
     accent = '#3f6a34';
+  } else if (theme.skyType === 'coastal_marine') {
+    bg = '#071426';
+    accent = '#0e2544';
+    gridLine = 'rgba(0, 234, 255, 0.16)';
   } else if (theme.skyType === 'sahara_sunset') {
     bg = '#6b4222';
     accent = '#8a562c';

@@ -11,6 +11,7 @@ import {
   createTerrainTextureSet,
   createContactShadowTexture,
   createHeadlightBeamTexture,
+  createUnderglowHaloTexture,
   RoadTextureBundle,
   TerrainTextureBundle,
 } from './RoadTextures';
@@ -69,8 +70,12 @@ export class GameEngine {
   private headlightPoolMesh: THREE.Mesh | null = null;
   private contactShadowTex: THREE.CanvasTexture | null = null;
   private headlightBeamTex: THREE.CanvasTexture | null = null;
+  private underglowHaloTex: THREE.CanvasTexture | null = null;
+  private underglowHaloMesh: THREE.Mesh | null = null;
   private leftExhaust: THREE.Mesh | null = null;
   private rightExhaust: THREE.Mesh | null = null;
+  private leftExhaustFlame: THREE.Mesh | null = null;
+  private rightExhaustFlame: THREE.Mesh | null = null;
   private underglowLight: THREE.PointLight | null = null;
 
   // Animated Windshield Wipers
@@ -89,6 +94,7 @@ export class GameEngine {
   private terrainTexBundle: TerrainTextureBundle | null = null;
   private roadLines: THREE.Group[] = [];
   private guardrails: THREE.Group[] = [];
+  private chevronMarkers: THREE.Group[] = [];
   private streetLamps: THREE.Group[] = [];
   private buildings: THREE.Group[] = [];
   private roadsideTrees: THREE.Group[] = [];
@@ -279,6 +285,7 @@ export class GameEngine {
 
     this.contactShadowTex = createContactShadowTexture();
     this.headlightBeamTex = createHeadlightBeamTexture();
+    this.underglowHaloTex = createUnderglowHaloTexture();
 
     this.setupLighting();
     this.applyTheme();
@@ -309,7 +316,8 @@ export class GameEngine {
             std.map !== this.flyoverTexBundle?.map &&
             std.map !== this.terrainTexBundle?.map &&
             std.map !== this.contactShadowTex &&
-            std.map !== this.headlightBeamTex
+            std.map !== this.headlightBeamTex &&
+            std.map !== this.underglowHaloTex
           ) {
             std.map.dispose();
           }
@@ -343,6 +351,9 @@ export class GameEngine {
     if (this.underglowLight) {
       this.underglowLight.color.set(colorHex);
     }
+    if (this.underglowHaloMesh) {
+      (this.underglowHaloMesh.material as THREE.MeshBasicMaterial).color.set(colorHex);
+    }
   }
 
   private setupLighting() {
@@ -365,25 +376,25 @@ export class GameEngine {
     this.scene.background = new THREE.Color(this.currentTheme.fogColor);
     this.scene.fog = new THREE.FogExp2(this.currentTheme.fogColor, this.currentTheme.fogDensity);
 
-    const isDayLike =
-      this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coastal_marine';
+    const isDayOnly = this.currentTheme.skyType === 'daytime';
+    const isTwilightCoastal = this.currentTheme.skyType === 'coastal_marine';
 
     if (this.ambientLight) {
       this.ambientLight.color.setHex(this.currentTheme.ambientLight);
-      this.ambientLight.intensity = isDayLike ? 0.95 : 0.75;
+      this.ambientLight.intensity = isDayOnly ? 0.95 : isTwilightCoastal ? 0.85 : 0.78;
     }
     if (this.hemiLight) {
       this.hemiLight.color.setHex(this.currentTheme.dirLightA);
       this.hemiLight.groundColor.setHex(this.currentTheme.roadColor);
-      this.hemiLight.intensity = isDayLike ? 0.8 : 0.45;
+      this.hemiLight.intensity = isDayOnly ? 0.8 : isTwilightCoastal ? 0.65 : 0.48;
     }
     if (this.dirLightA) {
       this.dirLightA.color.setHex(this.currentTheme.dirLightA);
-      this.dirLightA.intensity = isDayLike ? 1.6 : 1.3;
+      this.dirLightA.intensity = isDayOnly ? 1.6 : isTwilightCoastal ? 1.48 : 1.32;
     }
     if (this.dirLightB) {
       this.dirLightB.color.setHex(this.currentTheme.dirLightB);
+      this.dirLightB.intensity = isTwilightCoastal ? 1.25 : 1.05;
     }
 
     this.buildRoad();
@@ -420,11 +431,64 @@ export class GameEngine {
       this.cloudsGroup = null;
     }
 
-    const isDaytime =
-      this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coastal_marine';
+    const isDayOnly = this.currentTheme.skyType === 'daytime';
+    const isTwilightCoastal = this.currentTheme.skyType === 'coastal_marine';
 
-    if (isDaytime) {
+    if (isTwilightCoastal) {
+      // Dramatic Twilight Coastal Dusk Sky Dome (matches the 16:9 cyber-coastal banner)
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const grad = ctx.createLinearGradient(0, 0, 0, 512);
+        grad.addColorStop(0, '#04091a');
+        grad.addColorStop(0.35, '#0b1e48');
+        grad.addColorStop(0.68, '#1e3a6e');
+        grad.addColorStop(0.86, '#6d3b68');
+        grad.addColorStop(0.96, '#f97316');
+        grad.addColorStop(1, '#0c1f44');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 512, 512);
+      }
+      const skyTex = new THREE.CanvasTexture(canvas);
+      skyTex.colorSpace = THREE.SRGBColorSpace;
+      const skyGeo = new THREE.SphereGeometry(750, 32, 16);
+      const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide });
+      this.skyMesh = new THREE.Mesh(skyGeo, skyMat);
+      this.scene.add(this.skyMesh);
+
+      // Subtle Upper Twilight Stars
+      const starCount = 700;
+      const sGeom = new THREE.BufferGeometry();
+      const sPos = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i += 3) {
+        sPos[i] = (Math.random() - 0.5) * 950;
+        sPos[i + 1] = 85 + Math.random() * 240;
+        sPos[i + 2] = -150 - Math.random() * 900;
+      }
+      sGeom.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+      this.stars = new THREE.Points(
+        sGeom,
+        new THREE.PointsMaterial({ color: 0xa5f3fc, size: 0.7, transparent: true, opacity: 0.65 })
+      );
+      this.scene.add(this.stars);
+
+      // Low Twilight Dusk Sun Disc over the Coastal Bay
+      this.sunMesh = new THREE.Mesh(
+        new THREE.CircleGeometry(48, 32),
+        new THREE.MeshBasicMaterial({ color: 0xfdba74, transparent: true, opacity: 0.85 })
+      );
+      this.sunMesh.position.set(85, 58, -560);
+      this.scene.add(this.sunMesh);
+
+      this.sunGlowMesh = new THREE.Mesh(
+        new THREE.CircleGeometry(110, 32),
+        new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.24 })
+      );
+      this.sunGlowMesh.position.set(85, 58, -562);
+      this.scene.add(this.sunGlowMesh);
+    } else if (isDayOnly) {
       // 1. Realistic Clear Daytime Gradient Sky Dome
       const canvas = document.createElement('canvas');
       canvas.width = 512;
@@ -549,24 +613,27 @@ export class GameEngine {
   }
 
   private updateWeatherTargets() {
-    const isDayLike =
-      this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coastal_marine';
+    const isDayOnly = this.currentTheme.skyType === 'daytime';
+    const isTwilightCoastal = this.currentTheme.skyType === 'coastal_marine';
+    const isWetNeon =
+      isTwilightCoastal ||
+      this.currentTheme.skyType === 'cyber' ||
+      this.currentTheme.skyType === 'midnight_neon';
 
     this.targetFogDensity = this.currentTheme.fogDensity;
     this.targetFogColor.setHex(this.currentTheme.fogColor);
     this.targetAmbientColor.setHex(this.currentTheme.ambientLight);
-    this.targetAmbientIntensity = isDayLike ? 0.95 : 0.75;
-    this.scene.environmentIntensity = isDayLike ? 0.74 : 0.58;
+    this.targetAmbientIntensity = isDayOnly ? 0.95 : isTwilightCoastal ? 0.85 : 0.78;
+    this.scene.environmentIntensity = isDayOnly ? 0.74 : isTwilightCoastal ? 0.88 : 0.68;
     if (this.roadMesh) {
       const mat = this.roadMesh.material as THREE.MeshStandardMaterial;
-      mat.roughness = 0.86;
-      mat.metalness = 0.08;
+      mat.roughness = isWetNeon ? 0.44 : 0.86;
+      mat.metalness = isWetNeon ? 0.22 : 0.08;
     }
     if (this.secondaryRoadMesh) {
       const mat = this.secondaryRoadMesh.material as THREE.MeshStandardMaterial;
-      mat.roughness = 0.88;
-      mat.metalness = 0.06;
+      mat.roughness = isWetNeon ? 0.48 : 0.88;
+      mat.metalness = isWetNeon ? 0.18 : 0.06;
     }
   }
 
@@ -633,17 +700,17 @@ export class GameEngine {
     this.scene.add(this.weatherParticles);
   }
 
-  // Road curvature calculator
+  // Road curvature calculator (slightly sharper curves for harder, engaging driving)
   public getRoadCurveX(z: number, distanceOverride?: number): number {
     if (!this.currentTheme.hasCurves) return 0;
     const dist = distanceOverride !== undefined ? distanceOverride : this.distance;
     const travelOffset = dist * 0.85;
-    const sampleZ = (z - travelOffset) * 0.0035;
-    return Math.sin(sampleZ) * 8.5 + Math.sin(sampleZ * 0.45 + 1.2) * 4.2;
+    const sampleZ = (z - travelOffset) * 0.0038;
+    return Math.sin(sampleZ) * 9.5 + Math.sin(sampleZ * 0.45 + 1.2) * 4.8;
   }
 
   private buildRoad() {
-    // Cleanup previous road, terrain, guardrails, lines, lamps & puddles
+    // Cleanup previous road, terrain, guardrails, chevrons, lines, lamps & puddles
     if (this.roadMesh) {
       this.disposeObject(this.roadMesh);
       this.roadMesh = null;
@@ -662,6 +729,8 @@ export class GameEngine {
     }
     this.guardrails.forEach((rail) => this.disposeObject(rail));
     this.guardrails = [];
+    this.chevronMarkers.forEach((cm) => this.disposeObject(cm));
+    this.chevronMarkers = [];
     this.roadLines.forEach((l) => this.disposeObject(l));
     this.roadLines = [];
     this.streetLamps.forEach((lamp) => this.disposeObject(lamp));
@@ -672,8 +741,11 @@ export class GameEngine {
     const length = 1500;
     const isDayLike =
       this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coastal_marine' ||
       this.currentTheme.skyType === 'sahara_sunset';
+    const isWetNeon =
+      this.currentTheme.skyType === 'coastal_marine' ||
+      this.currentTheme.skyType === 'cyber' ||
+      this.currentTheme.skyType === 'midnight_neon';
     const isMarine =
       this.currentTheme.hasMarineDrive ||
       this.currentTheme.id === 'road-coastal-marine' ||
@@ -702,8 +774,8 @@ export class GameEngine {
       bumpMap: this.roadTexBundle.bumpMap,
       bumpScale: 0.035,
       roughnessMap: this.roadTexBundle.roughnessMap,
-      roughness: 0.86,
-      metalness: 0.08,
+      roughness: isWetNeon ? 0.44 : 0.86,
+      metalness: isWetNeon ? 0.22 : 0.08,
     });
     this.roadMesh = new THREE.Mesh(roadGeo, roadMat);
     this.roadMesh.rotation.x = -Math.PI / 2;
@@ -876,6 +948,63 @@ export class GameEngine {
       });
     }
 
+    // 5b. Glowing Neon Chevron Curve Boards along outer barriers (matches 16:9 banner signs)
+    const chevPostMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.4 });
+    const createChevronTex = (colorHex: string) => {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const cx = c.getContext('2d');
+      if (cx) {
+        cx.fillStyle = '#090d1f';
+        cx.fillRect(0, 0, 128, 128);
+        cx.strokeStyle = colorHex;
+        cx.lineWidth = 8;
+        cx.strokeRect(6, 6, 116, 116);
+        cx.lineWidth = 14;
+        cx.beginPath();
+        cx.moveTo(78, 28);
+        cx.lineTo(36, 64);
+        cx.lineTo(78, 100);
+        cx.stroke();
+        cx.beginPath();
+        cx.moveTo(104, 28);
+        cx.lineTo(62, 64);
+        cx.lineTo(104, 100);
+        cx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    };
+    const chevTexPink = createChevronTex('#ff2a85');
+    const chevTexCyan = createChevronTex('#00eaff');
+
+    for (let z = -1180; z < 80; z += 72) {
+      [-1, 1].forEach((side) => {
+        const cg = new THREE.Group();
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 1.9, 6), chevPostMat);
+        post.position.y = 0.95;
+        cg.add(post);
+
+        const board = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.15, 1.15),
+          new THREE.MeshBasicMaterial({
+            map: side < 0 ? chevTexPink : chevTexCyan,
+            side: THREE.DoubleSide,
+          })
+        );
+        board.position.y = 1.95;
+        cg.add(board);
+
+        const cx = side * 14.55;
+        cg.position.set(cx, 0, z);
+        cg.userData = { baseX: cx };
+        this.scene.add(cg);
+        this.chevronMarkers.push(cg);
+      });
+    }
+
     // 6. Realistic Rain Puddle Splashes (expanding ripple rings on tarmac)
     for (let p = 0; p < 22; p++) {
       const puddle = new THREE.Mesh(
@@ -906,7 +1035,7 @@ export class GameEngine {
     this.roadsideTrees = [];
 
     const sky = this.currentTheme.skyType;
-    const isDay = sky === 'daytime' || sky === 'coastal_marine';
+    const isDay = sky === 'daytime';
     const isCoastal = sky === 'coastal_marine';
     const isCanyon = sky === 'sahara_sunset';
     const isMagma = sky === 'magma';
@@ -918,8 +1047,8 @@ export class GameEngine {
 
     for (let z = -1200; z < 100; z += 28) {
       [-1, 1].forEach((side) => {
-        // Leave ocean side open on Coastal Highway so sandy beach, palms & ocean horizon stay clear!
-        if (isCoastal && side === 1) return;
+        // On Coastal Cyber, keep right ocean horizon open near road, place distant illuminated skyline towers far across the bay
+        if (isCoastal && side === 1 && Math.random() > 0.32) return;
 
         // 1. Realistic Roadside Greenery / Trees along highway embankments
         if (isDay && Math.random() > 0.15) {
@@ -944,7 +1073,7 @@ export class GameEngine {
         }
 
         // 2. Theme-Accurate Architecture / Natural Formations
-        const h = 35 + Math.random() * 130;
+        const h = isCoastal ? 50 + Math.random() * 145 : 35 + Math.random() * 130;
         const w = 12 + Math.random() * 20;
         const d = 14 + Math.random() * 22;
         const group = new THREE.Group();
@@ -1015,30 +1144,33 @@ export class GameEngine {
           crystal.position.y = h / 2;
           group.add(crystal);
         } else {
-          // Night / Cyber / Storm Rain Skyscrapers
+          // Futuristic Cyber / Twilight Illuminated Glass Skyscrapers
           const b = new THREE.Mesh(
             new THREE.BoxGeometry(w, h, d),
             new THREE.MeshStandardMaterial({
-              color: 0x081022,
-              emissive: side < 0 ? 0x120018 : 0x001420,
-              emissiveIntensity: 0.3,
-              roughness: 0.35,
-              metalness: 0.5,
+              color: isCoastal ? 0x0f1e3a : 0x081022,
+              emissive: side < 0 ? 0x0c1a38 : 0x061830,
+              emissiveIntensity: isCoastal ? 0.42 : 0.3,
+              roughness: 0.25,
+              metalness: 0.7,
             })
           );
           b.position.y = h / 2;
           group.add(b);
 
-          for (let y = 6; y < h; y += 8) {
+          for (let y = 6; y < h; y += 7.5) {
+            const winColor = isCoastal
+              ? (Math.random() > 0.35 ? 0x38bdf8 : 0xfbbf24)
+              : (Math.random() > 0.5 ? 0x00eaff : 0xff0077);
             const strip = new THREE.Mesh(
-              new THREE.BoxGeometry(w * 0.75, 0.22, 0.1),
+              new THREE.BoxGeometry(w * 0.82, 0.35, 0.12),
               new THREE.MeshBasicMaterial({
-                color: Math.random() > 0.5 ? 0x00eaff : 0xff0077,
+                color: winColor,
                 transparent: true,
-                opacity: 0.65,
+                opacity: 0.72,
               })
             );
-            strip.position.set(0, y, -d / 2 - 0.06);
+            strip.position.set(0, y, -d / 2 - 0.08);
             group.add(strip);
           }
         }
@@ -1083,6 +1215,8 @@ export class GameEngine {
         const buildingX =
           side === -1
             ? -(28 + w * 0.5 + Math.random() * 26)
+            : isCoastal
+            ? 145 + w * 0.5 + Math.random() * 45
             : 36 + w * 0.5 + Math.random() * 28;
         group.position.set(buildingX, 0, z + Math.random() * 10);
         group.userData.baseX = buildingX;
@@ -1126,14 +1260,21 @@ export class GameEngine {
       girder.position.set(0, trackY + 1.1, 0);
       g.add(girder);
 
-      // Green & White Metro Transit Side Crash Barriers
+      // Cyber Silver & Electric Cyan Transit Side Barriers
       [-2.1, 2.1].forEach((gx) => {
         const railWall = new THREE.Mesh(
           new THREE.BoxGeometry(0.2, 0.9, 35.5),
-          new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.5 })
+          new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.35, metalness: 0.7 })
         );
         railWall.position.set(gx, trackY + 1.8, 0);
         g.add(railWall);
+
+        const railGlow = new THREE.Mesh(
+          new THREE.BoxGeometry(0.24, 0.14, 35.5),
+          new THREE.MeshBasicMaterial({ color: 0x00eaff })
+        );
+        railGlow.position.set(gx, trackY + 2.28, 0);
+        g.add(railGlow);
       });
 
       // Steel Tracks
@@ -1149,16 +1290,16 @@ export class GameEngine {
       this.metroRailPillars.push(g);
     }
 
-    // Elevated Metro Express Train (৪ বগির আধুনিক মেট্রোরেল)
+    // Streamlined Hyper-Express SkyTrain (Silver & Electric Cyan/Cobalt Livery)
     const trainGroup = new THREE.Group();
     const trainLength = 52;
     const trainWidth = 3.2;
     const trainHeight = 2.8;
 
-    const silverBodyMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.85, roughness: 0.2 });
-    const greenRibbonMat = new THREE.MeshBasicMaterial({ color: 0x059669 });
-    const redRibbonMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
-    const trainGlassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 });
+    const silverBodyMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.15 });
+    const cyanRibbonMat = new THREE.MeshBasicMaterial({ color: 0x00eaff });
+    const cobaltRibbonMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+    const trainGlassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.08, metalness: 0.92 });
 
     const carLen = 12.2;
     for (let c = 0; c < 4; c++) {
@@ -1169,12 +1310,12 @@ export class GameEngine {
       shell.position.y = trainHeight / 2;
       carGroup.add(shell);
 
-      const gStripe = new THREE.Mesh(new THREE.BoxGeometry(trainWidth + 0.04, 0.45, carLen + 0.02), greenRibbonMat);
+      const gStripe = new THREE.Mesh(new THREE.BoxGeometry(trainWidth + 0.04, 0.35, carLen + 0.02), cyanRibbonMat);
       gStripe.position.y = 1.1;
       carGroup.add(gStripe);
 
-      const rStripe = new THREE.Mesh(new THREE.BoxGeometry(trainWidth + 0.05, 0.25, carLen + 0.03), redRibbonMat);
-      rStripe.position.y = 0.7;
+      const rStripe = new THREE.Mesh(new THREE.BoxGeometry(trainWidth + 0.05, 0.25, carLen + 0.03), cobaltRibbonMat);
+      rStripe.position.y = 0.72;
       carGroup.add(rStripe);
 
       const win = new THREE.Mesh(new THREE.BoxGeometry(trainWidth + 0.06, 0.75, carLen * 0.85), trainGlassMat);
@@ -1263,36 +1404,37 @@ export class GameEngine {
       canvas.height = 200;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.fillStyle = '#065f46'; // Highway Green
+        ctx.fillStyle = '#061326'; // Sleek Digital Cyber Highway Panel
         ctx.fillRect(0, 0, 768, 200);
 
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 10;
+        ctx.strokeStyle = '#00eaff';
+        ctx.lineWidth = 8;
         ctx.strokeRect(8, 8, 752, 184);
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 34px sans-serif';
+        ctx.fillStyle = '#e0f2fe';
+        ctx.font = 'bold 34px "Orbitron", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(data.top, 384, 52);
+        ctx.fillText(data.top, 384, 54);
 
-        ctx.fillStyle = '#fef08a';
+        ctx.fillStyle = '#38bdf8';
         ctx.font = 'bold 20px "Orbitron", sans-serif';
         ctx.fillText(data.sub, 384, 88);
 
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.strokeStyle = 'rgba(0, 234, 255, 0.45)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(30, 110);
         ctx.lineTo(738, 110);
         ctx.stroke();
 
-        ctx.font = 'bold 28px sans-serif';
-        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillStyle = '#00eaff';
         ctx.textAlign = 'left';
-        ctx.fillText(data.dirL, 50, 155);
+        ctx.fillText(data.dirL, 48, 156);
 
+        ctx.fillStyle = '#f472b6';
         ctx.textAlign = 'right';
-        ctx.fillText(data.dirR, 718, 155);
+        ctx.fillText(data.dirR, 720, 156);
       }
 
       const boardTex = new THREE.CanvasTexture(canvas);
@@ -1322,25 +1464,25 @@ export class GameEngine {
 
     if (!isMarine) return;
 
-    // 1. Ocean Plane
+    // 1. Shimmering Twilight Bay Ocean Plane
     const oceanGeo = new THREE.PlaneGeometry(380, 1500, 24, 60);
     const oceanMat = new THREE.MeshStandardMaterial({
-      color: 0x0284c7,
-      roughness: 0.15,
-      metalness: 0.85,
+      color: 0x072c54,
+      roughness: 0.14,
+      metalness: 0.9,
     });
     this.oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
     this.oceanMesh.rotation.x = -Math.PI / 2;
     this.oceanMesh.position.set(205, -0.6, -650);
     this.scene.add(this.oceanMesh);
 
-    // 2. Coastal Sand Beach Strip
+    // 2. Coastal Sand / Harbor Promenades
     const beachGroup = new THREE.Group();
     const sandGeo = new THREE.PlaneGeometry(32, 1500);
     const sandMat = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b,
-      roughness: 0.9,
-      metalness: 0.1,
+      color: 0x1e293b,
+      roughness: 0.7,
+      metalness: 0.25,
     });
     const beach = new THREE.Mesh(sandGeo, sandMat);
     beach.rotation.x = -Math.PI / 2;
@@ -1349,7 +1491,49 @@ export class GameEngine {
     this.scene.add(beachGroup);
     this.marineDriveObjects.push(beachGroup);
 
-    // 3. Coastal Speedboats & Yachts
+    // 3. Illuminated Cable-Stayed Coastal Suspension Bridge across the Bay (matches banner horizon!)
+    const bridgeGroup = new THREE.Group();
+    const pylonMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.75, roughness: 0.25 });
+    const cableMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.75 });
+    const deckMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.35 });
+    const deckGlowMat = new THREE.MeshBasicMaterial({ color: 0x00eaff });
+
+    const bridgeSpanDeck = new THREE.Mesh(new THREE.BoxGeometry(220, 1.4, 7.5), deckMat);
+    bridgeSpanDeck.position.set(145, 16, 0);
+    bridgeGroup.add(bridgeSpanDeck);
+
+    const bridgeGlowStrip = new THREE.Mesh(new THREE.BoxGeometry(220, 0.35, 7.8), deckGlowMat);
+    bridgeGlowStrip.position.set(145, 16.9, 0);
+    bridgeGroup.add(bridgeGlowStrip);
+
+    [90, 200].forEach((px) => {
+      const tower = new THREE.Mesh(new THREE.BoxGeometry(3.5, 62, 3.5), pylonMat);
+      tower.position.set(px, 31, 0);
+      bridgeGroup.add(tower);
+
+      const beacon = new THREE.Mesh(
+        new THREE.SphereGeometry(1.1, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+      );
+      beacon.position.set(px, 62.5, 0);
+      bridgeGroup.add(beacon);
+
+      // Diagonal stay cables radiating from tower top
+      [-45, -30, -15, 15, 30, 45].forEach((dx) => {
+        const len = Math.hypot(dx, 44);
+        const stay = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, len, 5), cableMat);
+        stay.position.set(px + dx * 0.5, 39, 0);
+        stay.rotation.z = Math.atan2(dx, 44);
+        bridgeGroup.add(stay);
+      });
+    });
+
+    bridgeGroup.position.set(0, 0, -480);
+    bridgeGroup.userData = { baseX: 0 };
+    this.scene.add(bridgeGroup);
+    this.marineDriveObjects.push(bridgeGroup);
+
+    // 4. Coastal Speedboats & Yachts
     for (let sb = -1100; sb < 50; sb += 160) {
       const boat = this.createSampanBoat();
       boat.position.set(55 + Math.random() * 80, -0.4, sb + (Math.random() - 0.5) * 40);
@@ -1358,30 +1542,21 @@ export class GameEngine {
       this.marineDriveObjects.push(boat);
     }
 
-    // 4. Coconut Palm Trees along the beach coast
-    for (let pz = -1200; pz < 100; pz += 28) {
+    // 5. Coastal Palm Trees along the promenade
+    for (let pz = -1200; pz < 100; pz += 32) {
       const palm = this.createCoconutPalmTree();
-      palm.position.set(16.8 + Math.random() * 6, 0, pz + (Math.random() - 0.5) * 6);
+      palm.position.set(17.2 + Math.random() * 5, 0, pz + (Math.random() - 0.5) * 6);
       palm.userData = { baseX: palm.position.x };
       this.scene.add(palm);
       this.marineDriveObjects.push(palm);
     }
 
-    // 5. Undulating Lush Coastal Hills on the Left
-    for (let hz = -1200; hz < 100; hz += 60) {
-      const hill = this.createCoastalHill();
-      hill.position.set(-48 - Math.random() * 30, 0, hz);
-      hill.userData = { baseX: hill.position.x };
-      this.scene.add(hill);
-      this.marineDriveObjects.push(hill);
-    }
-
-    // 6. Coastal Highway Overhead Signboard Gantries & Milestones
+    // 6. Cyber-Coastal Overhead Digital Gantries
     const milestones = [
-      { text: 'HIGHWAY JUNCTION 01 (EAST CORRIDOR 12 KM)', sub: 'EXPRESSWAY TOLLWAY LINK', z: -80 },
-      { text: 'COASTAL BRIDGE EXPRESSWAY (BRIDGE 45 KM)', sub: 'OVERSEAS CROSSING CORRIDOR', z: -360 },
-      { text: 'METROPOLIS BYPASS (JUNCTION 90 KM)', sub: 'HIGH SPEED TRANSIT CORRIDOR', z: -680 },
-      { text: 'PACIFIC SCENIC DRIVE (BAY 150 KM)', sub: 'COASTAL OCEAN PARKWAY', z: -980 },
+      { text: 'ST3D BAYSIDE CORRIDOR • SECTOR 01', sub: 'COASTAL EXPRESSWAY LINK', z: -80 },
+      { text: 'SKYBRIDGE INTERCHANGE • BRIDGE 45 KM', sub: 'HIGH SPEED OVERSEAS EXPRESS', z: -360 },
+      { text: 'METROPOLIS HARBOR LOOP • JUNCTION 90 KM', sub: 'RADAR MONITORED ZONE', z: -680 },
+      { text: 'PACIFIC CYBER DRIVE • TERMINAL 150 KM', sub: 'NIGHT TURBO HIGHWAY', z: -980 },
     ];
 
     milestones.forEach((m) => {
@@ -1843,49 +2018,36 @@ export class GameEngine {
 
   private createSampanBoat(): THREE.Group {
     const group = new THREE.Group();
-    const woodMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.8 });
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.9, 6.5), woodMat);
-    hull.position.y = 0.3;
+    const hullMat = new THREE.MeshPhysicalMaterial({
+      color: 0xe2e8f0,
+      metalness: 0.45,
+      roughness: 0.2,
+      clearcoat: 0.85,
+    });
+    const trimMat = new THREE.MeshBasicMaterial({ color: 0x00eaff });
+    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
+
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.85, 7.2), hullMat);
+    hull.position.y = 0.32;
     group.add(hull);
 
-    const prow = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.2, 4), woodMat);
-    prow.rotation.x = -Math.PI / 2.8;
-    prow.position.set(0, 0.7, -3.8);
-    group.add(prow);
+    const bow = new THREE.Mesh(new THREE.ConeGeometry(1.28, 2.5, 4), hullMat);
+    bow.rotation.x = -Math.PI / 2;
+    bow.rotation.z = Math.PI / 4;
+    bow.position.set(0, 0.36, -4.4);
+    group.add(bow);
 
-    const stern = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.8, 4), woodMat);
-    stern.rotation.x = Math.PI / 2.8;
-    stern.position.set(0, 0.6, 3.6);
-    group.add(stern);
+    const neonStripe = new THREE.Mesh(new THREE.BoxGeometry(2.58, 0.12, 6.8), trimMat);
+    neonStripe.position.set(0, 0.56, 0);
+    group.add(neonStripe);
 
-    const mast = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.06, 4.5, 6),
-      new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.7 })
-    );
-    mast.position.set(0, 2.4, 0);
-    group.add(mast);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.72, 3.2), cabinMat);
+    cabin.position.set(0, 0.96, 0.25);
+    group.add(cabin);
 
-    const flagCanvas = document.createElement('canvas');
-    flagCanvas.width = 120; flagCanvas.height = 70;
-    const fctx = flagCanvas.getContext('2d');
-    if (fctx) {
-      fctx.fillStyle = '#0284c7';
-      fctx.fillRect(0, 0, 120, 70);
-      fctx.fillStyle = '#ffffff';
-      fctx.fillRect(0, 26, 120, 18);
-      fctx.fillStyle = '#f59e0b';
-      fctx.beginPath();
-      fctx.arc(60, 35, 11, 0, Math.PI * 2);
-      fctx.fill();
-    }
-    const flagTex = new THREE.CanvasTexture(flagCanvas);
-    flagTex.colorSpace = THREE.SRGBColorSpace;
-    const flag = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.4, 0.8),
-      new THREE.MeshBasicMaterial({ map: flagTex, side: THREE.DoubleSide })
-    );
-    flag.position.set(0.7, 4.0, 0);
-    group.add(flag);
+    const navLight = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), trimMat);
+    navLight.position.set(0, 1.55, 0.6);
+    group.add(navLight);
 
     return group;
   }
@@ -1911,29 +2073,18 @@ export class GameEngine {
     return group;
   }
 
-  private createCoastalHill(): THREE.Group {
-    const group = new THREE.Group();
-    const hillMat = new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.85 });
-    const h = 25 + Math.random() * 45;
-    const rad = 22 + Math.random() * 20;
-    const hill = new THREE.Mesh(new THREE.ConeGeometry(rad, h, 8), hillMat);
-    hill.position.y = h / 2 - 2;
-    group.add(hill);
-    return group;
-  }
-
   private createMarineDriveGantry(title: string, sub: string): THREE.Group {
     const group = new THREE.Group();
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.88, roughness: 0.25 });
 
     [-14.5, 14.5].forEach((gx) => {
-      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 9.5, 8), frameMat);
-      p.position.set(gx, 4.75, 0);
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 9.6, 8), frameMat);
+      p.position.set(gx, 4.8, 0);
       group.add(p);
     });
 
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(29.6, 0.45, 0.45), frameMat);
-    bar.position.set(0, 9.2, 0);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(29.8, 0.45, 0.45), frameMat);
+    bar.position.set(0, 9.25, 0);
     group.add(bar);
 
     const canvas = document.createElement('canvas');
@@ -1941,22 +2092,22 @@ export class GameEngine {
     canvas.height = 140;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#065f46';
+      ctx.fillStyle = '#061326';
       ctx.fillRect(0, 0, 600, 140);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#00eaff';
+      ctx.lineWidth = 7;
       ctx.strokeRect(6, 6, 588, 128);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#00eaff';
       ctx.font = 'bold 32px "Hind Siliguri", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(title, 300, 56);
-      ctx.fillStyle = '#fde047';
+      ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 24px "Hind Siliguri", sans-serif';
       ctx.fillText(sub, 300, 105);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(13.5, 3.2), new THREE.MeshBasicMaterial({ map: tex }));
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(13.8, 3.25), new THREE.MeshBasicMaterial({ map: tex }));
     sign.position.set(0, 7.2, 0);
     group.add(sign);
 
@@ -1970,17 +2121,22 @@ export class GameEngine {
     }
     this.playerWheels = [];
     this.headlightPoolMesh = null;
+    this.underglowHaloMesh = null;
+    this.leftExhaust = null;
+    this.rightExhaust = null;
+    this.leftExhaustFlame = null;
+    this.rightExhaustFlame = null;
 
     const group = new THREE.Group();
 
-    // Ground Contact Shadow & Dual Headlight Light-Pool Projections
+    // Ground Contact Shadow, Neon Underglow Halo & Dual Headlight Light-Pool Projections
     if (this.contactShadowTex) {
       const shadowMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.75, 5.2),
+        new THREE.PlaneGeometry(2.8, 5.25),
         new THREE.MeshBasicMaterial({
           map: this.contactShadowTex,
           transparent: true,
-          opacity: 0.85,
+          opacity: 0.88,
           depthWrite: false,
           polygonOffset: true,
           polygonOffsetFactor: -1,
@@ -1991,140 +2147,218 @@ export class GameEngine {
       group.add(shadowMesh);
     }
 
-    if (this.headlightBeamTex) {
-      this.headlightPoolMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(5.6, 17.5),
+    if (this.underglowHaloTex) {
+      this.underglowHaloMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.85, 6.1),
         new THREE.MeshBasicMaterial({
-          map: this.headlightBeamTex,
+          map: this.underglowHaloTex,
+          color: new THREE.Color(this.activeCar.underglow),
           transparent: true,
-          opacity: 0.45,
+          opacity: 0.72,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
           polygonOffset: true,
           polygonOffsetFactor: -2,
         })
       );
+      this.underglowHaloMesh.rotation.x = -Math.PI / 2;
+      this.underglowHaloMesh.position.set(0, 0.03, 0);
+      group.add(this.underglowHaloMesh);
+    }
+
+    if (this.headlightBeamTex) {
+      this.headlightPoolMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(5.8, 18.5),
+        new THREE.MeshBasicMaterial({
+          map: this.headlightBeamTex,
+          transparent: true,
+          opacity: 0.54,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -3,
+        })
+      );
       this.headlightPoolMesh.rotation.x = -Math.PI / 2;
-      this.headlightPoolMesh.position.set(0, 0.035, -10.8);
+      this.headlightPoolMesh.position.set(0, 0.038, -11.2);
       group.add(this.headlightPoolMesh);
     }
 
-    // --- REALISTIC SPORTS CAR MODEL ---
-    // 1. Sleek Aerodynamic Lower Chassis / Splitter
-    const chassisMat = new THREE.MeshStandardMaterial({ color: 0x111625, metalness: 0.85, roughness: 0.3 });
-    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.22, 4.3), chassisMat);
-    chassis.position.y = 0.22;
-    group.add(chassis);
-
-    // Front Bumper / Air Dam
-    const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.32, 0.4), chassisMat);
-    frontBumper.position.set(0, 0.28, -2.15);
-    group.add(frontBumper);
-
-    // 2. Main Sculpted Car Body
-    const bodyMat = new THREE.MeshStandardMaterial({
+    // --- ST3D FUTURISTIC CYBER HYPERCAR MODEL (Clearcoated Physical PBR) ---
+    const carbonMat = new THREE.MeshStandardMaterial({ color: 0x0b101b, metalness: 0.82, roughness: 0.28 });
+    const bodyMat = new THREE.MeshPhysicalMaterial({
       color: this.activeCar.bodyColor,
-      metalness: 0.9,
-      roughness: 0.15,
+      metalness: 0.88,
+      roughness: 0.16,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.08,
     });
-    const mainBody = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.52, 3.9), bodyMat);
-    mainBody.position.y = 0.52;
-    group.add(mainBody);
-
-    // Hood Slope / Front Bonnet
-    const hoodMat = new THREE.MeshStandardMaterial({
+    const accentMat = new THREE.MeshPhysicalMaterial({
       color: this.activeCar.accentColor || this.activeCar.bodyColor,
       metalness: 0.92,
-      roughness: 0.12,
+      roughness: 0.14,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.06,
     });
-    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.18, 1.4), hoodMat);
-    hood.position.set(0, 0.68, -1.25);
-    hood.rotation.x = 0.08;
-    group.add(hood);
-
-    // 3. Cabin & Glass Canopy (Front Windshield, Side Windows, Rear Glass)
-    const glassMat = new THREE.MeshStandardMaterial({
-      color: 0x0a1424,
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x071120,
       metalness: 0.95,
       roughness: 0.05,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
     });
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.45, 1.95), glassMat);
-    cabin.position.set(0, 0.96, -0.05);
+    const neonTrimColor = new THREE.Color(this.activeCar.underglow || '#00eaff');
+    const neonTrimMat = new THREE.MeshBasicMaterial({ color: neonTrimColor });
+
+    // 1. Carbon-Fiber Lower Aero Splitter, Side Skirts & Rear Diffuser
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.16, 4.45), carbonMat);
+    chassis.position.y = 0.2;
+    group.add(chassis);
+
+    const frontSplitter = new THREE.Mesh(new THREE.BoxGeometry(1.98, 0.07, 0.65), carbonMat);
+    frontSplitter.position.set(0, 0.14, -2.18);
+    group.add(frontSplitter);
+
+    [-0.98, 0.98].forEach((sx) => {
+      const skirtNeon = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.06, 2.55), neonTrimMat);
+      skirtNeon.position.set(sx, 0.2, 0);
+      group.add(skirtNeon);
+    });
+
+    // 2. Sculpted Widebody Main Chassis & Sloped Hypercar Nose
+    const mainBody = new THREE.Mesh(new THREE.BoxGeometry(1.86, 0.44, 3.95), bodyMat);
+    mainBody.position.y = 0.46;
+    group.add(mainBody);
+
+    // Sculpted rear quarter haunches
+    [-0.78, 0.78].forEach((hx) => {
+      const haunch = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.24, 1.5), accentMat);
+      haunch.position.set(hx, 0.66, 1.05);
+      group.add(haunch);
+    });
+
+    // Sloped Hood & Vented Intake Strip
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.66, 0.14, 1.5), accentMat);
+    hood.position.set(0, 0.62, -1.32);
+    hood.rotation.x = 0.11;
+    group.add(hood);
+
+    const noseTip = new THREE.Mesh(new THREE.BoxGeometry(1.76, 0.2, 0.48), bodyMat);
+    noseTip.position.set(0, 0.36, -2.1);
+    noseTip.rotation.x = 0.14;
+    group.add(noseTip);
+
+    // 3. Teardrop Glass Canopy, Carbon Roof Spine & Sloped Windshield
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.38, 1.85), glassMat);
+    cabin.position.set(0, 0.86, -0.05);
     group.add(cabin);
 
-    // Roof Top Shell (Body Color)
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.06, 1.35), bodyMat);
-    roof.position.set(0, 1.20, -0.05);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.06, 1.28), carbonMat);
+    roof.position.set(0, 1.08, 0.02);
     group.add(roof);
 
-    // Front Windshield Frame
-    const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.42, 0.1), glassMat);
-    windshield.position.set(0, 0.95, -1.05);
-    windshield.rotation.x = -0.55;
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.4, 0.1), glassMat);
+    windshield.position.set(0, 0.84, -1.04);
+    windshield.rotation.x = -0.64;
     group.add(windshield);
 
-    // 4. Side Mirrors (Left & Right)
-    [-0.85, 0.85].forEach((mx) => {
-      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.16), bodyMat);
-      mirror.position.set(mx, 0.85, -0.7);
+    const rearLouvers = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.08, 1.05), carbonMat);
+    rearLouvers.position.set(0, 0.82, 1.16);
+    rearLouvers.rotation.x = 0.28;
+    group.add(rearLouvers);
+
+    // 4. Aerodynamic Side Mirrors
+    [-0.92, 0.92].forEach((mx) => {
+      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.18), carbonMat);
+      mirror.position.set(mx, 0.78, -0.72);
       group.add(mirror);
     });
 
-    // 5. Rear Racing Spoiler / Wing
-    const wingMat = new THREE.MeshStandardMaterial({ color: 0x050814, metalness: 0.8, roughness: 0.2 });
-    const wingBlade = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.08, 0.4), wingMat);
-    wingBlade.position.set(0, 1.15, 1.85);
+    // 5. Carbon GT Rear Wing with Side Endplates
+    const wingBlade = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.07, 0.42), carbonMat);
+    wingBlade.position.set(0, 1.12, 1.9);
+    wingBlade.rotation.x = 0.08;
     group.add(wingBlade);
-    [-0.55, 0.55].forEach((sx) => {
-      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.35, 0.12), wingMat);
-      strut.position.set(sx, 0.95, 1.85);
+
+    [-0.97, 0.97].forEach((ex) => {
+      const endplate = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.24, 0.5), accentMat);
+      endplate.position.set(ex, 1.08, 1.9);
+      group.add(endplate);
+    });
+    [-0.56, 0.56].forEach((sx) => {
+      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.14), carbonMat);
+      strut.position.set(sx, 0.88, 1.88);
       group.add(strut);
     });
 
-    // 6. Realistic LED Headlights (Crisp White/Ice Blue)
-    [-0.65, 0.65].forEach((hx) => {
+    // 6. Sharp LED Laser Headlights + Cyber Cyan DRL Blades
+    [-0.68, 0.68].forEach((hx) => {
       const headlight = new THREE.Mesh(
-        new THREE.BoxGeometry(0.32, 0.14, 0.12),
-        new THREE.MeshBasicMaterial({ color: 0xffffff })
+        new THREE.BoxGeometry(0.34, 0.09, 0.14),
+        new THREE.MeshBasicMaterial({ color: 0xe0f7ff })
       );
-      headlight.position.set(hx, 0.58, -1.98);
+      headlight.position.set(hx, 0.5, -2.06);
+      headlight.rotation.y = hx < 0 ? 0.16 : -0.16;
       group.add(headlight);
     });
 
-    // 7. Realistic Horizontal Rear Light Bar (Ruby Red)
-    const taillightBar = new THREE.Mesh(
-      new THREE.BoxGeometry(1.65, 0.12, 0.08),
-      new THREE.MeshBasicMaterial({ color: 0xff002b })
-    );
-    taillightBar.position.set(0, 0.65, 1.98);
+    // 7. Aggressive X/Chevron Ruby LED Tail-Lights + Center Light Bar & Diffuser Fins
+    const tailMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+    const taillightBar = new THREE.Mesh(new THREE.BoxGeometry(1.66, 0.07, 0.08), tailMat);
+    taillightBar.position.set(0, 0.62, 2.02);
     group.add(taillightBar);
 
-    // 8. 4 Realistic Spinning Wheels (Tread Tire + Alloy Rim + Cross Spokes)
-    const tireMat = new THREE.MeshStandardMaterial({ color: 0x18181c, roughness: 0.78 });
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0xd9e2ec, metalness: 0.95, roughness: 0.15 });
-    const caliperMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.35, metalness: 0.5 });
+    [-0.68, 0.68].forEach((tx) => {
+      const chevTop = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.06, 0.09), tailMat);
+      chevTop.position.set(tx, 0.67, 2.03);
+      chevTop.rotation.z = tx < 0 ? 0.42 : -0.42;
+      group.add(chevTop);
+
+      const chevBot = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.06, 0.09), tailMat);
+      chevBot.position.set(tx, 0.56, 2.03);
+      chevBot.rotation.z = tx < 0 ? -0.42 : 0.42;
+      group.add(chevBot);
+    });
+
+    const diffuser = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.22, 0.24), carbonMat);
+    diffuser.position.set(0, 0.24, 2.06);
+    group.add(diffuser);
+
+    [-0.44, 0.44].forEach((px) => {
+      const pipe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.11, 0.12, 0.28, 12),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.95, roughness: 0.12 })
+      );
+      pipe.rotation.x = Math.PI / 2;
+      pipe.position.set(px, 0.34, 2.08);
+      group.add(pipe);
+    });
+
+    // 8. 4 Performance Alloy Wheels with Glowing Rim Accent & Calipers
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.72 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.12 });
+    const caliperMat = new THREE.MeshStandardMaterial({ color: 0x00eaff, emissive: 0x0088aa, emissiveIntensity: 0.5 });
 
     const wheelPositions = [
-      [-0.94, 0.38, -1.25],
-      [0.94, 0.38, -1.25],
-      [-0.94, 0.38, 1.25],
-      [0.94, 0.38, 1.25],
+      [-0.95, 0.38, -1.28],
+      [0.95, 0.38, -1.28],
+      [-0.95, 0.38, 1.28],
+      [0.95, 0.38, 1.28],
     ];
 
     wheelPositions.forEach(([x, y, z]) => {
       const wheelGroup = new THREE.Group();
-      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.28, 18), tireMat);
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.3, 20), tireMat);
       tire.rotation.z = Math.PI / 2;
       wheelGroup.add(tire);
 
-      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.30, 16), rimMat);
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.32, 16), rimMat);
       rim.rotation.z = Math.PI / 2;
       wheelGroup.add(rim);
 
-      // Visible spokes so wheel spin reads dynamically at speed
-      const spokeA = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 0.055), caliperMat);
+      const spokeA = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.44, 0.055), caliperMat);
       wheelGroup.add(spokeA);
-      const spokeB = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.055, 0.42), rimMat);
+      const spokeB = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.055, 0.44), rimMat);
       wheelGroup.add(spokeB);
 
       wheelGroup.position.set(x, y, z);
@@ -2133,40 +2367,66 @@ export class GameEngine {
     });
 
     // Underglow Neon Light
-    this.underglowLight = new THREE.PointLight(this.activeCar.underglow, 2.5, 6);
-    this.underglowLight.position.set(0, 0.15, 0);
+    this.underglowLight = new THREE.PointLight(this.activeCar.underglow, 2.8, 7.5);
+    this.underglowLight.position.set(0, 0.16, 0);
     group.add(this.underglowLight);
 
-    // Dual Exhaust Nitro Jets
-    const exhGeom = new THREE.CylinderGeometry(0.08, 0.2, 1.2, 8);
-    const exhMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    // Twin-Layer Dual Exhaust Nitro Afterburner Jets (Cyan Inner Core + Orange Flame Plume)
+    const coreGeom = new THREE.ConeGeometry(0.12, 1.35, 10);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: 0x67e8f9,
+      transparent: true,
+      opacity: 0.94,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const flameGeom = new THREE.ConeGeometry(0.21, 1.95, 10);
+    const flameMat = new THREE.MeshBasicMaterial({
+      color: 0xff6b00,
+      transparent: true,
+      opacity: 0.72,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
 
-    this.leftExhaust = new THREE.Mesh(exhGeom, exhMat);
+    this.leftExhaust = new THREE.Mesh(coreGeom, coreMat);
     this.leftExhaust.rotation.x = Math.PI / 2;
-    this.leftExhaust.position.set(-0.4, 0.45, 2.4);
+    this.leftExhaust.position.set(-0.44, 0.34, 2.75);
     this.leftExhaust.visible = false;
     group.add(this.leftExhaust);
 
-    this.rightExhaust = new THREE.Mesh(exhGeom, exhMat);
+    this.rightExhaust = new THREE.Mesh(coreGeom, coreMat);
     this.rightExhaust.rotation.x = Math.PI / 2;
-    this.rightExhaust.position.set(0.4, 0.45, 2.4);
+    this.rightExhaust.position.set(0.44, 0.34, 2.75);
     this.rightExhaust.visible = false;
     group.add(this.rightExhaust);
 
-    // Realistic Windshield Wipers (pivot at base for realistic rain sweep)
+    this.leftExhaustFlame = new THREE.Mesh(flameGeom, flameMat);
+    this.leftExhaustFlame.rotation.x = Math.PI / 2;
+    this.leftExhaustFlame.position.set(-0.44, 0.34, 3.05);
+    this.leftExhaustFlame.visible = false;
+    group.add(this.leftExhaustFlame);
+
+    this.rightExhaustFlame = new THREE.Mesh(flameGeom, flameMat);
+    this.rightExhaustFlame.rotation.x = Math.PI / 2;
+    this.rightExhaustFlame.position.set(0.44, 0.34, 3.05);
+    this.rightExhaustFlame.visible = false;
+    group.add(this.rightExhaustFlame);
+
+    // Windshield Wipers
     const wiperMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
-    const wiperGeo = new THREE.BoxGeometry(0.04, 0.36, 0.02);
-    wiperGeo.translate(0, 0.18, 0); // pivot at base
+    const wiperGeo = new THREE.BoxGeometry(0.04, 0.34, 0.02);
+    wiperGeo.translate(0, 0.17, 0);
 
     this.leftWiper = new THREE.Mesh(wiperGeo, wiperMat);
-    this.leftWiper.position.set(-0.35, 0.86, -1.05);
-    this.leftWiper.rotation.x = -0.55;
+    this.leftWiper.position.set(-0.34, 0.75, -1.04);
+    this.leftWiper.rotation.x = -0.64;
     this.leftWiper.rotation.z = -0.5;
     group.add(this.leftWiper);
 
     this.rightWiper = new THREE.Mesh(wiperGeo, wiperMat);
-    this.rightWiper.position.set(0.25, 0.86, -1.05);
-    this.rightWiper.rotation.x = -0.55;
+    this.rightWiper.position.set(0.24, 0.75, -1.04);
+    this.rightWiper.rotation.x = -0.64;
     this.rightWiper.rotation.z = -0.5;
     group.add(this.rightWiper);
 
@@ -2300,35 +2560,54 @@ export class GameEngine {
     return group;
   }
 
-  // --- TRAFFIC SPAWNER (AUTHENTIC HIGHWAY VEHICLES, ANTI-WALL & ANTI-OVERLAP) ---
+  // --- TRAFFIC SPAWNER (CHALLENGING HIGHWAY WAVES, ANTI-WALL & ANTI-OVERLAP) ---
   private spawnTraffic() {
     const allLanes = [-2, -1, 0, 1, 2];
     const occupiedNearSpawn = new Set<number>();
     const occupiedInBand = new Set<number>();
 
     for (const t of this.traffic) {
-      if (t.group.position.z < -170) {
+      if (t.group.position.z < -165) {
         occupiedInBand.add(t.lane);
-        if (Math.abs(t.group.position.z - -260) < 40) {
+        if (Math.abs(t.group.position.z - -260) < 42) {
           occupiedNearSpawn.add(t.lane);
         }
       }
     }
 
-    // Never form an unbeatable 5-lane wall across the horizon
+    // Never form an unbeatable 5-lane wall across the horizon (always leave >= 1 escape lane)
     if (occupiedInBand.size >= 4) return;
 
     const freeLanes = allLanes.filter((l) => !occupiedNearSpawn.has(l));
     if (freeLanes.length === 0) return;
 
-    const level = Math.max(1, Math.floor(this.distance / 700) + 1);
-    const lane = freeLanes[Math.floor(Math.random() * freeLanes.length)];
-    const isPolice = !this.policeActive && Math.random() < Math.min(0.22, 0.12 + (level - 1) * 0.015);
+    const level = Math.max(1, Math.floor(this.distance / 520) + 1);
+    const primaryIdx = Math.floor(Math.random() * freeLanes.length);
+    const lane = freeLanes[primaryIdx];
+    this.spawnTrafficVehicleAt(lane, -260, level);
+
+    // Harder Difficulty: From Level 2+, occasionally spawn a staggered paired vehicle in another lane
+    const remainingFree = freeLanes.filter((l) => l !== lane);
+    if (
+      level >= 2 &&
+      occupiedInBand.size <= 2 &&
+      remainingFree.length >= 2 &&
+      Math.random() < Math.min(0.45, 0.16 + level * 0.045)
+    ) {
+      const secondLane = remainingFree[Math.floor(Math.random() * remainingFree.length)];
+      this.spawnTrafficVehicleAt(secondLane, -292, level);
+    }
+  }
+
+  private spawnTrafficVehicleAt(lane: number, spawnZ: number, level: number) {
+    const isPolice = this.policeActive
+      ? Math.random() < 0.35
+      : Math.random() < Math.min(0.24, 0.14 + (level - 1) * 0.015);
 
     let group: THREE.Group;
     let w = 1.75;
     let l = 3.9;
-    let vehicleSpeed = 75 + Math.random() * 52 + Math.min(28, (level - 1) * 4);
+    let vehicleSpeed = 72 + Math.random() * 52 + Math.min(34, (level - 1) * 4.5);
     let lights: { r: THREE.PointLight; b: THREE.PointLight } | undefined;
     let vehicleType: 'bus' | 'truck' | 'police' | 'car' | 'suv' = 'car';
 
@@ -2337,37 +2616,42 @@ export class GameEngine {
       const policeRes = this.createPoliceCar();
       group = policeRes.group;
       lights = policeRes.lights;
-      w = 1.78; l = 4.0;
-      vehicleSpeed = 95 + Math.random() * 42 + Math.min(25, (level - 1) * 3);
+      w = 1.78;
+      l = 4.0;
+      vehicleSpeed = 98 + Math.random() * 48 + Math.min(32, (level - 1) * 3.5);
     } else {
       const typeRoll = Math.random();
       if (typeRoll < 0.28) {
         vehicleType = 'bus';
         group = HighwayVehicles.createHighwayExpressCoach();
-        w = 2.5; l = 8.2;
-        vehicleSpeed = 70 + Math.random() * 28 + Math.min(20, (level - 1) * 2.5);
+        w = 2.5;
+        l = 8.2;
+        vehicleSpeed = 68 + Math.random() * 30 + Math.min(24, (level - 1) * 2.5);
       } else if (typeRoll < 0.52) {
         vehicleType = 'truck';
         group = HighwayVehicles.createSemiTruckTrailer();
-        w = 2.6; l = 12.8;
-        vehicleSpeed = 58 + Math.random() * 24 + Math.min(18, (level - 1) * 2);
+        w = 2.6;
+        l = 12.8;
+        vehicleSpeed = 55 + Math.random() * 25 + Math.min(20, (level - 1) * 2);
       } else if (typeRoll < 0.76) {
         vehicleType = 'suv';
         group = HighwayVehicles.createHighwaySUV();
-        w = 1.95; l = 4.5;
-        vehicleSpeed = 85 + Math.random() * 40 + Math.min(25, (level - 1) * 3);
+        w = 1.95;
+        l = 4.5;
+        vehicleSpeed = 84 + Math.random() * 44 + Math.min(30, (level - 1) * 3.5);
       } else {
         vehicleType = 'car';
         const paints = [0xd32f2f, 0x1976d2, 0xf8fafc, 0xf59e0b, 0x1e293b, 0x475569];
         const carPaint = paints[Math.floor(Math.random() * paints.length)];
         group = this.createCivilianCar(carPaint, false);
-        w = 1.75; l = 3.9;
-        vehicleSpeed = 88 + Math.random() * 42 + Math.min(28, (level - 1) * 3.5);
+        w = 1.75;
+        l = 3.9;
+        vehicleSpeed = 86 + Math.random() * 46 + Math.min(32, (level - 1) * 3.8);
       }
     }
 
-    const initX = lane * this.laneWidth + this.getRoadCurveX(-260);
-    group.position.set(initX, 0, -260);
+    const initX = lane * this.laneWidth + this.getRoadCurveX(spawnZ);
+    group.position.set(initX, 0, spawnZ);
     this.scene.add(group);
 
     this.traffic.push({
@@ -2375,7 +2659,7 @@ export class GameEngine {
       lane,
       currentX: lane * this.laneWidth,
       targetLane: lane,
-      laneChangeTimer: Math.max(2.2, 4.8 - level * 0.22) + Math.random() * 4.5,
+      laneChangeTimer: Math.max(1.4, 3.6 - level * 0.22) + Math.random() * 2.8,
       speed: vehicleSpeed,
       isPolice,
       policeLights: lights,
@@ -2777,18 +3061,18 @@ export class GameEngine {
     const boostPower = this.activeCar.nitroBoost + nitroUpgradeBonus;
     const multiplierBonus = 1 + (this.upgrades.multiplierLevel - 1) * 0.25;
 
-    const level = Math.max(1, Math.floor(this.distance / 700) + 1);
-    const speedRatio = Math.min(1.0, 0.75 + (level - 1) * 0.035 + this.distance / 12000);
+    const level = Math.max(1, Math.floor(this.distance / 520) + 1);
+    const speedRatio = Math.min(1.0, 0.75 + (level - 1) * 0.04 + this.distance / 11000);
     const grip = Math.min(1.0, weather.gripFactor + gripUpgradeBonus);
     let targetSpeed = baseTop * speedRatio * (0.92 + 0.08 * grip);
 
     if (this.isBoosting && this.nitro > 0) {
       targetSpeed += boostPower;
-      const drainRate = Math.max(16, 36 - (this.upgrades.nitroLevel - 1) * 4);
+      const drainRate = Math.max(18, 40 - (this.upgrades.nitroLevel - 1) * 4);
       this.nitro = Math.max(0, this.nitro - dt * drainRate);
       if (this.nitro <= 0) this.isBoosting = false;
     } else {
-      const chargeRate = 3.0 + (this.upgrades.nitroLevel - 1) * 0.8;
+      const chargeRate = 2.2 + (this.upgrades.nitroLevel - 1) * 0.65;
       this.nitro = Math.min(100, this.nitro + dt * chargeRate);
     }
 
@@ -2810,15 +3094,38 @@ export class GameEngine {
     }
 
     if (this.headlightPoolMesh) {
-      const isNight =
-        this.currentTheme.skyType !== 'daytime' &&
-        this.currentTheme.skyType !== 'coastal_marine';
-      (this.headlightPoolMesh.material as THREE.MeshBasicMaterial).opacity = isNight ? 0.56 : 0.16;
+      const isDay =
+        this.currentTheme.skyType === 'daytime' ||
+        this.currentTheme.skyType === 'sahara_sunset';
+      (this.headlightPoolMesh.material as THREE.MeshBasicMaterial).opacity = isDay ? 0.16 : 0.58;
+    }
+
+    if (this.underglowHaloMesh) {
+      const pulse = 0.05 * Math.sin(performance.now() * 0.008);
+      (this.underglowHaloMesh.material as THREE.MeshBasicMaterial).opacity =
+        (this.isBoosting ? 0.95 : 0.72) + pulse;
+    }
+    if (this.underglowLight) {
+      this.underglowLight.intensity = this.isBoosting ? 4.5 : 2.8;
     }
 
     if (this.leftExhaust && this.rightExhaust) {
       this.leftExhaust.visible = this.isBoosting;
       this.rightExhaust.visible = this.isBoosting;
+      if (this.isBoosting) {
+        const flicker = 0.88 + Math.sin(performance.now() * 0.045) * 0.16;
+        this.leftExhaust.scale.set(1, flicker, 1);
+        this.rightExhaust.scale.set(1, flicker, 1);
+      }
+    }
+    if (this.leftExhaustFlame && this.rightExhaustFlame) {
+      this.leftExhaustFlame.visible = this.isBoosting;
+      this.rightExhaustFlame.visible = this.isBoosting;
+      if (this.isBoosting) {
+        const flameFlicker = 0.84 + Math.cos(performance.now() * 0.06) * 0.22;
+        this.leftExhaustFlame.scale.set(1, flameFlicker, 1);
+        this.rightExhaustFlame.scale.set(1, flameFlicker, 1);
+      }
     }
 
     const forward = this.speed * 0.26 * dt;
@@ -2842,13 +3149,13 @@ export class GameEngine {
       if (this.comboTimer <= 0) this.combo = 1;
     }
 
-    // Police pursuit check
+    // Police pursuit check (more frequent high-intensity pursuit)
     this.policeTimer += dt;
-    if (!this.policeActive && this.policeTimer > 28) {
+    if (!this.policeActive && this.policeTimer > 20) {
       this.policeActive = true;
       this.policeTimer = 0;
       sound.playSiren();
-    } else if (this.policeActive && this.policeTimer > 22) {
+    } else if (this.policeActive && this.policeTimer > 24) {
       this.policeActive = false;
       this.policeTimer = 0;
     }
@@ -2938,6 +3245,17 @@ export class GameEngine {
         rail.position.x = rail.userData.side * 14.2 + this.getRoadCurveX(rail.position.z);
         const dCurv = this.getRoadCurveX(rail.position.z - 4) - this.getRoadCurveX(rail.position.z + 4);
         rail.rotation.y = Math.atan2(dCurv, 8);
+      }
+    });
+
+    // Neon Chevron Curve Boards scroll & curve alignment
+    this.chevronMarkers.forEach((cm) => {
+      cm.position.z += roadMovement;
+      if (cm.position.z > 25) cm.position.z -= 1368;
+      if (cm.userData.baseX !== undefined) {
+        cm.position.x = cm.userData.baseX + this.getRoadCurveX(cm.position.z);
+        const dCurv = this.getRoadCurveX(cm.position.z - 4) - this.getRoadCurveX(cm.position.z + 4);
+        cm.rotation.y = Math.atan2(dCurv, 8);
       }
     });
 
@@ -3067,14 +3385,14 @@ export class GameEngine {
 
     // Spawners (challenging progressive level scaling without impossible speed spikes)
     this.spawnTimer += dt;
-    const spawnInterval = Math.max(0.42, 1.05 - (level - 1) * 0.06 - this.distance / 10000);
+    const spawnInterval = Math.max(0.28, 0.84 - (level - 1) * 0.065 - this.distance / 8000);
     if (this.spawnTimer > spawnInterval) {
       this.spawnTraffic();
       this.spawnTimer = 0;
     }
 
     this.pickupTimer += dt;
-    if (this.pickupTimer > 2.4) {
+    if (this.pickupTimer > 2.7) {
       this.spawnCashPickup();
       this.pickupTimer = 0;
     }
@@ -3095,11 +3413,11 @@ export class GameEngine {
     // Traffic Update
     for (let i = this.traffic.length - 1; i >= 0; i--) {
       const t = this.traffic[i];
-      const relSpeed = Math.max(4.5, (this.speed - t.speed) * 0.052 + 6.5);
+      const relSpeed = Math.max(5.5, (this.speed - t.speed) * 0.06 + 8.0);
 
-      // Safe multi-lane navigation (only switch well ahead of player into an unobstructed adjacent lane)
+      // Safe multi-lane navigation (only switch ahead of player into an unobstructed adjacent lane)
       t.laneChangeTimer -= dt;
-      if (t.laneChangeTimer <= 0 && Math.abs(t.group.position.z - pz) > 32) {
+      if (t.laneChangeTimer <= 0 && Math.abs(t.group.position.z - pz) > 26) {
         const shift = Math.random() > 0.5 ? 1 : -1;
         const candidateLane = Math.max(-2, Math.min(2, t.lane + shift));
         if (candidateLane !== t.lane) {
@@ -3114,11 +3432,11 @@ export class GameEngine {
             t.lane = candidateLane;
           }
         }
-        t.laneChangeTimer = Math.max(2.2, 4.8 - level * 0.22) + Math.random() * 4.5;
+        t.laneChangeTimer = Math.max(1.4, 3.6 - level * 0.22) + Math.random() * 2.8;
       }
       const targetLaneX = t.targetLane * this.laneWidth;
       const laneDx = targetLaneX - t.currentX;
-      t.currentX += laneDx * Math.min(1, dt * 2.6);
+      t.currentX += laneDx * Math.min(1, dt * 3.4);
 
       t.group.position.z += relSpeed * dt;
       t.group.position.x = t.currentX + this.getRoadCurveX(t.group.position.z);
@@ -3144,7 +3462,7 @@ export class GameEngine {
           this.combo = Math.min(8, this.combo + 1);
           this.comboTimer = 3.8;
           this.nearMisses++;
-          this.nitro = Math.min(100, this.nitro + 16);
+          this.nitro = Math.min(100, this.nitro + 14);
           this.score += 350 * this.combo * weather.bonusMultiplier;
           this.cashCollectedThisRun += Math.round(65 * this.combo * multiplierBonus);
           sound.playNearMiss();
@@ -3387,6 +3705,18 @@ export class GameEngine {
       }
     });
 
+    this.chevronMarkers.forEach((cm) => {
+      cm.position.z += frame.roadMovement;
+      if (cm.position.z > 25) cm.position.z -= 1368;
+      if (cm.userData.baseX !== undefined) {
+        cm.position.x = cm.userData.baseX + this.getRoadCurveX(cm.position.z, frame.distance);
+        const dCurv =
+          this.getRoadCurveX(cm.position.z - 4, frame.distance) -
+          this.getRoadCurveX(cm.position.z + 4, frame.distance);
+        cm.rotation.y = Math.atan2(dCurv, 8);
+      }
+    });
+
     this.streetLamps.forEach((lamp) => {
       lamp.position.z += frame.roadMovement;
       if (lamp.position.z > 35) lamp.position.z -= 1300;
@@ -3589,6 +3919,8 @@ export class GameEngine {
     }
     this.guardrails.forEach((g) => this.disposeObject(g));
     this.guardrails = [];
+    this.chevronMarkers.forEach((cm) => this.disposeObject(cm));
+    this.chevronMarkers = [];
     this.roadLines.forEach((l) => this.disposeObject(l));
     this.roadLines = [];
     this.streetLamps.forEach((l) => this.disposeObject(l));
@@ -3652,6 +3984,10 @@ export class GameEngine {
     if (this.headlightBeamTex) {
       this.headlightBeamTex.dispose();
       this.headlightBeamTex = null;
+    }
+    if (this.underglowHaloTex) {
+      this.underglowHaloTex.dispose();
+      this.underglowHaloTex = null;
     }
     if (this.envRenderTarget) {
       this.envRenderTarget.dispose();

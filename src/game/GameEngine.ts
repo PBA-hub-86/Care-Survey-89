@@ -549,158 +549,42 @@ export class GameEngine {
   }
 
   private updateWeatherTargets() {
-    const isRainTheme = this.currentTheme.weather === 'rain';
     const isDayLike =
       this.currentTheme.skyType === 'daytime' ||
       this.currentTheme.skyType === 'coastal_marine';
 
-    if (this.currentWeatherType === 'rain') {
-      this.targetFogDensity = 0.0088;
-      this.targetFogColor.setHex(0x334155);
-      this.targetAmbientColor.setHex(0x64748b);
-      this.targetAmbientIntensity = 0.72;
-      this.scene.environmentIntensity = 0.95;
-      if (this.roadMesh) {
-        const mat = this.roadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = 0.28; // Wet glistening puddles via roughnessMap
-        mat.metalness = 0.25;
-      }
-      if (this.secondaryRoadMesh) {
-        const mat = this.secondaryRoadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = 0.32;
-        mat.metalness = 0.22;
-      }
-    } else if (this.currentWeatherType === 'fog') {
-      this.targetFogDensity = 0.0175; // Thick cinematic fog reducing visibility
-      this.targetFogColor.setHex(0xcfd8dc);
-      this.targetAmbientColor.setHex(0xb0bec5);
-      this.targetAmbientIntensity = 0.95;
-      this.scene.environmentIntensity = 0.55;
-      if (this.roadMesh) {
-        const mat = this.roadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = 0.72;
-        mat.metalness = 0.1;
-      }
-      if (this.secondaryRoadMesh) {
-        const mat = this.secondaryRoadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = 0.75;
-        mat.metalness = 0.1;
-      }
-    } else if (this.currentWeatherType === 'neon_snow') {
-      this.targetFogDensity = 0.0092;
-      this.targetFogColor.setHex(0x180b2b);
-      this.targetAmbientColor.setHex(0xa855f7);
-      this.targetAmbientIntensity = 1.05;
-      this.scene.environmentIntensity = 0.85;
-      if (this.roadMesh) {
-        const mat = this.roadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = 0.36;
-        mat.metalness = 0.22;
-      }
-      if (this.secondaryRoadMesh) {
-        const mat = this.secondaryRoadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = 0.4;
-        mat.metalness = 0.2;
-      }
-    } else {
-      // Clear sky
-      this.targetFogDensity = this.currentTheme.fogDensity;
-      this.targetFogColor.setHex(this.currentTheme.fogColor);
-      this.targetAmbientColor.setHex(this.currentTheme.ambientLight);
-      this.targetAmbientIntensity = isDayLike ? 0.95 : 0.75;
-      this.scene.environmentIntensity = isRainTheme ? 0.92 : isDayLike ? 0.74 : 0.58;
-      if (this.roadMesh) {
-        const mat = this.roadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = isRainTheme ? 0.32 : 0.86;
-        mat.metalness = isRainTheme ? 0.22 : 0.08;
-      }
-      if (this.secondaryRoadMesh) {
-        const mat = this.secondaryRoadMesh.material as THREE.MeshStandardMaterial;
-        mat.roughness = isRainTheme ? 0.36 : 0.88;
-        mat.metalness = isRainTheme ? 0.2 : 0.06;
-      }
+    this.targetFogDensity = this.currentTheme.fogDensity;
+    this.targetFogColor.setHex(this.currentTheme.fogColor);
+    this.targetAmbientColor.setHex(this.currentTheme.ambientLight);
+    this.targetAmbientIntensity = isDayLike ? 0.95 : 0.75;
+    this.scene.environmentIntensity = isDayLike ? 0.74 : 0.58;
+    if (this.roadMesh) {
+      const mat = this.roadMesh.material as THREE.MeshStandardMaterial;
+      mat.roughness = 0.86;
+      mat.metalness = 0.08;
+    }
+    if (this.secondaryRoadMesh) {
+      const mat = this.secondaryRoadMesh.material as THREE.MeshStandardMaterial;
+      mat.roughness = 0.88;
+      mat.metalness = 0.06;
     }
   }
 
   public setWeather(type: DynamicWeatherType) {
-    if (this.currentWeatherType === type) return;
     this.currentWeatherType = type;
-
     this.updateWeatherTargets();
     this.buildWeatherParticles();
-    sound.playWeatherAlert(type);
-
-    if (type === 'rain') {
-      this.weatherAlert = {
-        title: '🌧️ প্রবল বৃষ্টিপাত শুরু!',
-        subtitle: 'রাস্তা পিচ্ছিল (-22% গ্রিপ) | স্কোর বোনাস +25%',
-        icon: '🌧️',
-        color: 'from-blue-600/90 to-cyan-700/90',
-      };
-    } else if (type === 'fog') {
-      this.weatherAlert = {
-        title: '🌫️ ঘন কুয়াশা নেমে এসেছে!',
-        subtitle: 'দৃষ্টিসীমা মারাত্মক সংকুচিত (~110m) | স্কোর বোনাস +40%',
-        icon: '🌫️',
-        color: 'from-slate-600/90 to-gray-800/90',
-      };
-    } else if (type === 'neon_snow') {
-      this.weatherAlert = {
-        title: '❄️ নিয়ন তুষারপাত ও আইসি রোড!',
-        subtitle: 'মারাত্মক ড্রাফট ও স্লিপারি ট্র্যাক (-38% গ্রিপ) | স্কোর বোনাস +50%',
-        icon: '❄️',
-        color: 'from-purple-600/90 to-pink-700/90',
-      };
-    } else {
-      this.weatherAlert = {
-        title: '☀️ আকাশ পরিষ্কার হয়েছে!',
-        subtitle: 'স্বাভাবিক গ্রিপ ও পূর্ণ দৃশ্যমানতা ফিরে এসেছে',
-        icon: '☀️',
-        color: 'from-amber-500/90 to-yellow-600/90',
-      };
-    }
-    this.weatherAlertTimer = 4.2;
   }
 
   public getWeatherState(): WeatherState {
-    switch (this.currentWeatherType) {
-      case 'rain':
-        return {
-          type: 'rain',
-          name: 'প্রবল বৃষ্টিপাত',
-          icon: '🌧️',
-          effectLabel: 'হাইড্রোপ্ল্যানিং (-22% গ্রিপ) | +25% স্কোর',
-          gripFactor: 0.78,
-          bonusMultiplier: 1.25,
-        };
-      case 'fog':
-        return {
-          type: 'fog',
-          name: 'ঘন কুয়াশা',
-          icon: '🌫️',
-          effectLabel: 'দৃষ্টিসীমা সংকুচিত (~110m) | +40% স্কোর',
-          gripFactor: 0.95,
-          bonusMultiplier: 1.40,
-        };
-      case 'neon_snow':
-        return {
-          type: 'neon_snow',
-          name: 'নিয়ন তুষারপাত',
-          icon: '❄️',
-          effectLabel: 'আইসি রোড ড্রাফট (-38% গ্রিপ) | +50% স্কোর',
-          gripFactor: 0.62,
-          bonusMultiplier: 1.50,
-        };
-      default:
-        return {
-          type: 'clear',
-          name: 'পরিষ্কার আকাশ',
-          icon: '☀️',
-          effectLabel: 'আদর্শ গ্রিপ ও দৃশ্যমানতা (100%)',
-          gripFactor: 1.0,
-          bonusMultiplier: 1.0,
-        };
-    }
+    return {
+      type: 'clear',
+      name: 'পরিষ্কার আকাশ',
+      icon: '☀️',
+      effectLabel: 'আদর্শ গ্রিপ ও দৃশ্যমানতা (100%)',
+      gripFactor: 1.0,
+      bonusMultiplier: 1.0,
+    };
   }
 
   private buildWeatherParticles() {
@@ -718,140 +602,35 @@ export class GameEngine {
       this.weatherPositions = null;
     }
 
-    const type = this.currentWeatherType;
+    const weather = this.currentTheme.weather;
+    if (!weather || weather === 'none') return;
 
-    if (type === 'rain') {
-      // 1,300 vertical rushing rain streaks
-      const count = 1300;
-      const geom = new THREE.BufferGeometry();
-      const pos = new Float32Array(count * 3);
-      for (let i = 0; i < count * 3; i += 3) {
-        pos[i] = (Math.random() - 0.5) * 52;
-        pos[i + 1] = Math.random() * 26;
-        pos[i + 2] = -Math.random() * 230;
-      }
-      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      this.weatherPositions = pos;
+    const count = weather === 'embers' ? 500 : 700;
+    const geom = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
 
-      this.weatherParticles = new THREE.Points(
-        geom,
-        new THREE.PointsMaterial({
-          color: 0x7dd3fc,
-          size: 0.38,
-          transparent: true,
-          opacity: 0.85,
-          depthWrite: false,
-        })
-      );
-      this.scene.add(this.weatherParticles);
-    } else if (type === 'fog') {
-      // 380 soft rolling volumetric mist puffs
-      const count = 380;
-      const geom = new THREE.BufferGeometry();
-      const pos = new Float32Array(count * 3);
-      for (let i = 0; i < count * 3; i += 3) {
-        pos[i] = (Math.random() - 0.5) * 55;
-        pos[i + 1] = 0.8 + Math.random() * 9.5;
-        pos[i + 2] = 10 - Math.random() * 220;
-      }
-      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      this.weatherPositions = pos;
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 64;
-      canvas.height = 64;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        g.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-        g.addColorStop(0.5, 'rgba(240, 245, 255, 0.2)');
-        g.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, 64, 64);
-      }
-      const fogTexture = new THREE.CanvasTexture(canvas);
-
-      this.weatherParticles = new THREE.Points(
-        geom,
-        new THREE.PointsMaterial({
-          map: fogTexture,
-          color: 0xe2e8f0,
-          size: 16.0,
-          transparent: true,
-          opacity: 0.35,
-          depthWrite: false,
-        })
-      );
-      this.scene.add(this.weatherParticles);
-    } else if (type === 'neon_snow') {
-      // 950 multi-colored swirling neon snowflakes
-      const count = 950;
-      const geom = new THREE.BufferGeometry();
-      const pos = new Float32Array(count * 3);
-      const colors = new Float32Array(count * 3);
-
-      for (let i = 0; i < count; i++) {
-        const idx = i * 3;
-        pos[idx] = (Math.random() - 0.5) * 50;
-        pos[idx + 1] = Math.random() * 25;
-        pos[idx + 2] = -Math.random() * 220;
-
-        const rand = Math.random();
-        if (rand < 0.42) {
-          colors[idx] = 0.15; colors[idx + 1] = 0.88; colors[idx + 2] = 1.0; // Neon cyan
-        } else if (rand < 0.84) {
-          colors[idx] = 0.98; colors[idx + 1] = 0.22; colors[idx + 2] = 0.72; // Neon magenta
-        } else {
-          colors[idx] = 0.92; colors[idx + 1] = 0.97; colors[idx + 2] = 1.0; // Frost white
-        }
-      }
-      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      this.weatherPositions = pos;
-
-      this.weatherParticles = new THREE.Points(
-        geom,
-        new THREE.PointsMaterial({
-          vertexColors: true,
-          size: 0.7,
-          transparent: true,
-          opacity: 0.9,
-          depthWrite: false,
-        })
-      );
-      this.scene.add(this.weatherParticles);
-    } else {
-      // Clear - check theme ambient particles
-      const weather = this.currentTheme.weather;
-      if (!weather || weather === 'none') return;
-
-      const count = weather === 'rain' ? 800 : weather === 'embers' ? 500 : 700;
-      const geom = new THREE.BufferGeometry();
-      const pos = new Float32Array(count * 3);
-
-      for (let i = 0; i < count * 3; i += 3) {
-        pos[i] = (Math.random() - 0.5) * 45;
-        pos[i + 1] = Math.random() * 25;
-        pos[i + 2] = -Math.random() * 220;
-      }
-
-      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      this.weatherPositions = pos;
-
-      const pColor = weather === 'rain' ? 0x38bdf8 : weather === 'embers' ? 0xf97316 : 0xa855f7;
-      const pSize = weather === 'rain' ? 0.35 : weather === 'embers' ? 0.45 : 0.6;
-
-      this.weatherParticles = new THREE.Points(
-        geom,
-        new THREE.PointsMaterial({
-          color: pColor,
-          size: pSize,
-          transparent: true,
-          opacity: 0.75,
-        })
-      );
-      this.scene.add(this.weatherParticles);
+    for (let i = 0; i < count * 3; i += 3) {
+      pos[i] = (Math.random() - 0.5) * 45;
+      pos[i + 1] = Math.random() * 25;
+      pos[i + 2] = -Math.random() * 220;
     }
+
+    geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    this.weatherPositions = pos;
+
+    const pColor = weather === 'embers' ? 0xf97316 : 0xa855f7;
+    const pSize = weather === 'embers' ? 0.45 : 0.6;
+
+    this.weatherParticles = new THREE.Points(
+      geom,
+      new THREE.PointsMaterial({
+        color: pColor,
+        size: pSize,
+        transparent: true,
+        opacity: 0.75,
+      })
+    );
+    this.scene.add(this.weatherParticles);
   }
 
   // Road curvature calculator
@@ -923,8 +702,8 @@ export class GameEngine {
       bumpMap: this.roadTexBundle.bumpMap,
       bumpScale: 0.035,
       roughnessMap: this.roadTexBundle.roughnessMap,
-      roughness: this.currentTheme.weather === 'rain' ? 0.32 : 0.86,
-      metalness: this.currentTheme.weather === 'rain' ? 0.22 : 0.08,
+      roughness: 0.86,
+      metalness: 0.08,
     });
     this.roadMesh = new THREE.Mesh(roadGeo, roadMat);
     this.roadMesh.rotation.x = -Math.PI / 2;
@@ -1670,8 +1449,8 @@ export class GameEngine {
         bumpMap: this.flyoverTexBundle.bumpMap,
         bumpScale: 0.025,
         roughnessMap: this.flyoverTexBundle.roughnessMap,
-        roughness: this.currentTheme.weather === 'rain' ? 0.36 : 0.88,
-        metalness: this.currentTheme.weather === 'rain' ? 0.2 : 0.06,
+        roughness: 0.88,
+        metalness: 0.06,
       })
     );
     this.secondaryRoadMesh.rotation.x = -Math.PI / 2;
@@ -2971,22 +2750,7 @@ export class GameEngine {
       }
     }
 
-    // Dynamic Weather Cycle & Random Triggers
     this.weatherTimer += dt;
-    if (this.currentWeatherType !== 'clear') {
-      this.weatherDuration -= dt;
-      if (this.weatherDuration <= 0) {
-        this.setWeather('clear');
-        this.weatherTimer = 0;
-        this.nextWeatherInterval = 22 + Math.random() * 20; // 22-42s until next weather event
-      }
-    } else if (this.weatherTimer >= this.nextWeatherInterval) {
-      const choices: DynamicWeatherType[] = ['rain', 'fog', 'neon_snow'];
-      const chosen = choices[Math.floor(Math.random() * choices.length)];
-      this.setWeather(chosen);
-      this.weatherDuration = 18 + Math.random() * 16; // lasts 18-34s
-      this.weatherTimer = 0;
-    }
 
     // Smooth transition for fog and lighting
     if (this.scene.fog && this.scene.fog instanceof THREE.FogExp2) {
@@ -3049,13 +2813,7 @@ export class GameEngine {
       const isNight =
         this.currentTheme.skyType !== 'daytime' &&
         this.currentTheme.skyType !== 'coastal_marine';
-      const beamOp =
-        this.currentWeatherType === 'fog' || this.currentWeatherType === 'rain'
-          ? 0.68
-          : isNight
-          ? 0.56
-          : 0.16;
-      (this.headlightPoolMesh.material as THREE.MeshBasicMaterial).opacity = beamOp;
+      (this.headlightPoolMesh.material as THREE.MeshBasicMaterial).opacity = isNight ? 0.56 : 0.16;
     }
 
     if (this.leftExhaust && this.rightExhaust) {
@@ -3095,20 +2853,9 @@ export class GameEngine {
       this.policeTimer = 0;
     }
 
-    // Steering with dynamic weather & suspension grip upgrades
-    let handlingSpeed = 13.5 * steeringUpgradeMultiplier;
-    let bodyRoll = 0.07;
-
-    if (this.currentWeatherType === 'rain') {
-      handlingSpeed = 9.8 * steeringUpgradeMultiplier;
-      bodyRoll = 0.11;
-    } else if (this.currentWeatherType === 'neon_snow') {
-      handlingSpeed = 7.4 * steeringUpgradeMultiplier;
-      bodyRoll = 0.16;
-    } else if (this.currentWeatherType === 'fog') {
-      handlingSpeed = 13.0 * steeringUpgradeMultiplier;
-      bodyRoll = 0.07;
-    }
+    // Steering with suspension grip upgrades
+    const handlingSpeed = 13.5 * steeringUpgradeMultiplier;
+    const bodyRoll = 0.07;
 
     // Update Radio live traffic bulletins periodically
     this.radioNewsTimer += dt;
@@ -3124,16 +2871,12 @@ export class GameEngine {
       const dx = targetWorldX - this.playerGroup.position.x;
       this.playerGroup.position.x += dx * Math.min(1, dt * handlingSpeed);
 
-      let microDrift = 0;
-      if (this.currentWeatherType === 'neon_snow' && this.speed > 130) {
-        microDrift = Math.sin(performance.now() * 0.0035) * 0.12;
-      }
       const roadHeading = Math.atan2(
         this.getRoadCurveX(pz - 3) - this.getRoadCurveX(pz + 3),
         6
       );
       this.playerGroup.rotation.y = roadHeading + (-dx * 0.035);
-      this.playerGroup.rotation.z = -dx * bodyRoll + microDrift;
+      this.playerGroup.rotation.z = -dx * bodyRoll;
     }
 
     // Road scroll + PBR texture UV synchronization
@@ -3198,61 +2941,13 @@ export class GameEngine {
       }
     });
 
-    // Realistic Rain Puddle Splashes (expanding ripple rings on tarmac)
-    const isRain = this.currentWeatherType === 'rain' || this.currentTheme.weather === 'rain';
+    // Keep parked windshield wipers & clear tarmac puddles
     this.rainPuddles.forEach((puddle) => {
-      if (isRain) {
-        puddle.userData.scale += dt * puddle.userData.speed;
-        puddle.scale.set(puddle.userData.scale, puddle.userData.scale, 1);
-        puddle.userData.alpha = Math.max(0, 0.75 - puddle.userData.scale * 0.22);
-        (puddle.material as THREE.MeshBasicMaterial).opacity = puddle.userData.alpha;
-        if (puddle.userData.scale > 3.2) {
-          puddle.userData.scale = 0.2;
-          puddle.position.set(
-            (Math.random() - 0.5) * 16 + this.getRoadCurveX(puddle.position.z),
-            0.025,
-            -Math.random() * 90
-          );
-        }
-      } else {
-        (puddle.material as THREE.MeshBasicMaterial).opacity = 0;
-      }
+      (puddle.material as THREE.MeshBasicMaterial).opacity = 0;
     });
-
-    // Realistic Windshield Wipers Sweeping during Rain
-    if (isRain && this.leftWiper && this.rightWiper) {
-      this.wiperAngle += dt * 8.0;
-      const swing = Math.sin(this.wiperAngle) * 0.55;
-      this.leftWiper.rotation.z = -0.1 + swing;
-      this.rightWiper.rotation.z = -0.1 + swing;
-    } else if (this.leftWiper && this.rightWiper) {
+    if (this.leftWiper && this.rightWiper) {
       this.leftWiper.rotation.z = -0.5;
       this.rightWiper.rotation.z = -0.5;
-    }
-
-    // Unified Thunder Lightning Flash during Heavy Rain
-    if (isRain) {
-      this.lightningTimer -= dt;
-      if (this.lightningTimer <= 0) {
-        this.lightningTimer = 7 + Math.random() * 10;
-        if (this.ambientLight) {
-          const prevInt = this.targetAmbientIntensity;
-          this.ambientLight.intensity = 3.6;
-          const tid = window.setTimeout(() => {
-            if (this.ambientLight) this.ambientLight.intensity = prevInt;
-          }, 120);
-          this.lightningTimeouts.push(tid);
-        }
-        if (this.dirLightA) {
-          const origIntensity = this.dirLightA.intensity;
-          this.dirLightA.intensity = 4.5;
-          const tid2 = window.setTimeout(() => {
-            if (this.dirLightA) this.dirLightA.intensity = origIntensity;
-          }, 120);
-          this.lightningTimeouts.push(tid2);
-        }
-        sound.tone(75, 0.5, 'sawtooth', 0.25);
-      }
     }
 
     // Coastal Highway Scenery & Ocean Waves
@@ -3344,37 +3039,14 @@ export class GameEngine {
       });
     }
 
-    // Weather particle animation (Rain, Fog, Neon Snow)
+    // Ambient theme particles (Embers, Warp Stars)
     if (this.weatherParticles && this.weatherPositions) {
-      const currentActiveWeather = this.currentWeatherType !== 'clear' ? this.currentWeatherType : this.currentTheme.weather;
+      const currentActiveWeather = this.currentTheme.weather;
       const count = this.weatherPositions.length / 3;
 
       for (let i = 0; i < count; i++) {
         const idx = i * 3;
-        if (currentActiveWeather === 'rain') {
-          this.weatherPositions[idx + 1] -= dt * 200;
-          this.weatherPositions[idx + 2] += roadMovement * 0.95;
-          if (this.weatherPositions[idx + 1] < 0) {
-            this.weatherPositions[idx + 1] = 23 + Math.random() * 4;
-            this.weatherPositions[idx + 2] = -Math.random() * 230;
-          }
-        } else if (currentActiveWeather === 'fog') {
-          this.weatherPositions[idx] += Math.sin(performance.now() * 0.0012 + i) * dt * 3.2;
-          this.weatherPositions[idx + 2] += roadMovement * 0.45;
-          if (this.weatherPositions[idx + 2] > 25) {
-            this.weatherPositions[idx + 2] = -220 - Math.random() * 30;
-            this.weatherPositions[idx] = (Math.random() - 0.5) * 55;
-          }
-        } else if (currentActiveWeather === 'neon_snow') {
-          this.weatherPositions[idx + 1] -= dt * 14;
-          this.weatherPositions[idx] += Math.sin(performance.now() * 0.0025 + i * 0.8) * dt * 6.5;
-          this.weatherPositions[idx + 2] += roadMovement * 0.55;
-          if (this.weatherPositions[idx + 1] < 0) {
-            this.weatherPositions[idx + 1] = 24 + Math.random() * 3;
-            this.weatherPositions[idx + 2] = -Math.random() * 220;
-            this.weatherPositions[idx] = (Math.random() - 0.5) * 50;
-          }
-        } else if (currentActiveWeather === 'embers') {
+        if (currentActiveWeather === 'embers') {
           this.weatherPositions[idx + 1] += dt * 12;
           this.weatherPositions[idx] += Math.sin(performance.now() * 0.002 + i) * dt * 3;
           if (this.weatherPositions[idx + 1] > 25) {

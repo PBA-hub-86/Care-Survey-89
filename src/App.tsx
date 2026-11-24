@@ -314,14 +314,6 @@ export default function App() {
     }
   }, [upgrades]);
 
-  // Sync racing state attribute so ad overlays never steal active gameplay input
-  useEffect(() => {
-    document.body.dataset.racing = gameState === 'playing' ? 'true' : 'false';
-    return () => {
-      document.body.dataset.racing = 'false';
-    };
-  }, [gameState]);
-
   // Touch Drag / Swipe for Lane Steering (ignores MobileControls buttons to prevent double-steering)
   useEffect(() => {
     let startX = 0;
@@ -413,13 +405,6 @@ export default function App() {
     });
   };
 
-  const handleCycleWeather = () => {
-    if (!engineRef.current) return;
-    const presets: Array<'clear' | 'rain' | 'fog' | 'neon_snow'> = ['clear', 'rain', 'fog', 'neon_snow'];
-    const curIdx = presets.indexOf(engineRef.current.currentWeatherType);
-    const nextType = presets[(curIdx + 1) % presets.length];
-    engineRef.current.setWeather(nextType);
-  };
 
   // --- SHOP ACTIONS ---
   const handleSelectCar = (index: number) => {
@@ -596,11 +581,9 @@ export default function App() {
         />
       )}
 
-      {/* Pause Screen with Dynamic Environment Weather Preset Toggle */}
+      {/* Pause Screen */}
       {gameState === 'paused' && (
         <PauseModal
-          currentWeather={stats.weather.type}
-          onCycleWeather={handleCycleWeather}
           onResume={handleResume}
           onHome={handleHome}
         />

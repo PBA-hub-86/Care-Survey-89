@@ -9,10 +9,7 @@ import {
   Radio,
   Siren,
   Target,
-  CloudRain,
   Sun,
-  CloudFog,
-  Snowflake,
 } from 'lucide-react';
 
 interface HUDProps {
@@ -35,18 +32,9 @@ export const HUD: React.FC<HUDProps> = ({
     ? Math.min(100, Math.round((mission.progress / Math.max(1, mission.target)) * 100))
     : 0;
 
-  const renderWeatherIcon = () => {
-    switch (stats.weather.type) {
-      case 'rain':
-        return <CloudRain className="w-3.5 h-3.5 text-cyan-300 shrink-0" />;
-      case 'fog':
-        return <CloudFog className="w-3.5 h-3.5 text-slate-300 shrink-0" />;
-      case 'neon_snow':
-        return <Snowflake className="w-3.5 h-3.5 text-purple-300 shrink-0" />;
-      default:
-        return <Sun className="w-3.5 h-3.5 text-amber-300 shrink-0" />;
-    }
-  };
+  const renderWeatherIcon = () => (
+    <Sun className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+  );
 
   return (
     <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-2.5 sm:p-4 select-none font-sans">

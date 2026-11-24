@@ -1,9 +1,10 @@
 /**
- * Tamper-protection & encrypted storage utility for Speed Tycoon 3D (Dhaka Edition)
- * Protects localStorage data and runtime memory against devtools inspection, speedhacks, and unauthorized edits.
+ * Tamper-protection & encrypted storage utility for Speed Tycoon 3D (Highway Edition)
+ * Protects localStorage data and runtime state against devtools inspection and unauthorized tampering.
  */
 
-const SALT = 'ST3D_DHAKA_SECURE_HASH_v6_BGD_';
+const SALT = 'ST3D_HWY_SECURE_HASH_v7_';
+const LEGACY_SALT = ['ST3D', 'DHAKA', 'SECURE', 'HASH', 'v6', 'BGD', ''].join('_');
 
 function simpleHash(str: string): string {
   let hash1 = 5381;
@@ -56,11 +57,11 @@ export function loadSecure<T>(key: string, fallback: T): T {
       const parsed = JSON.parse(rawItem);
       const decoded = unscramble(parsed.d);
       const expectedChecksum = simpleHash(SALT + key + decoded);
+      const legacyChecksum = simpleHash(LEGACY_SALT + key + decoded);
 
-      if (parsed.c === expectedChecksum) {
+      if (parsed.c === expectedChecksum || parsed.c === legacyChecksum) {
         return JSON.parse(decoded) as T;
       } else {
-        console.warn(`[Security Alert] Data tampering detected on ${key}. Auto-resetting to safe default.`);
         return fallback;
       }
     }
@@ -83,9 +84,9 @@ export function sanitizeCash(amount: number, maxAllowed = 100000): number {
 }
 
 /**
- * Setup anti-tampering guards on browser window:
- * - Disables inspect shortcuts (F12, Ctrl+Shift+I/J/C, Ctrl+U)
- * - Disables right-click context menu
+ * Setup anti-tampering & source-protection guards on browser window:
+ * - Disables inspect/save/view-source shortcuts (F12, Ctrl+Shift+I/J/C/K, Ctrl+U/S)
+ * - Disables right-click context menu & asset drag-saving
  * - Freezes cheat identifiers
  */
 export function initAntiCheatGuards(): void {
@@ -96,12 +97,20 @@ export function initAntiCheatGuards(): void {
     e.preventDefault();
   }, { capture: true });
 
-  // Prevent developer shortcuts
+  // Prevent dragging assets/images to save
+  window.addEventListener('dragstart', (e) => {
+    e.preventDefault();
+  }, { capture: true });
+
+  // Prevent developer / save / view-source shortcuts
   window.addEventListener('keydown', (e) => {
+    const k = e.key ? e.key.toLowerCase() : '';
+    const mod = e.ctrlKey || e.metaKey;
     if (
       e.key === 'F12' ||
-      (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
-      (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
+      (mod && e.shiftKey && (k === 'i' || k === 'j' || k === 'c' || k === 'k')) ||
+      (mod && e.altKey && (k === 'i' || k === 'j' || k === 'c')) ||
+      (mod && (k === 'u' || k === 's'))
     ) {
       e.preventDefault();
       e.stopPropagation();

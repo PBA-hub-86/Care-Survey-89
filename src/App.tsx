@@ -29,9 +29,15 @@ export default function App() {
     initAntiCheatGuards();
   }, []);
 
-  // Persistence: Cars (Secured & Tamper-proof)
+  // Persistence: Cars (Secured & Tamper-proof, merged cleanly with latest specs)
   const [cars, setCars] = useState<CarConfig[]>(() => {
-    return loadSecure<CarConfig[]>('st3d_cars_sec_v5', INITIAL_CARS);
+    const saved = loadSecure<CarConfig[]>('st3d_cars_sec_v5', INITIAL_CARS);
+    return INITIAL_CARS.map((initCar) => {
+      const match = saved.find((c) => c.id === initCar.id);
+      return match
+        ? { ...initCar, unlocked: match.unlocked || initCar.unlocked, underglow: match.underglow || initCar.underglow }
+        : initCar;
+    });
   });
 
   const [selectedCarIndex, setSelectedCarIndex] = useState<number>(() => {
@@ -39,9 +45,13 @@ export default function App() {
     return idx >= 0 && idx < INITIAL_CARS.length ? idx : 0;
   });
 
-  // Persistence: Road Themes (Secured)
+  // Persistence: Road Themes (Secured, always refreshes clean track names & skyType)
   const [roads, setRoads] = useState<RoadTheme[]>(() => {
-    return loadSecure<RoadTheme[]>('st3d_roads_sec_v5', INITIAL_ROAD_THEMES);
+    const saved = loadSecure<RoadTheme[]>('st3d_roads_sec_v5', INITIAL_ROAD_THEMES);
+    return INITIAL_ROAD_THEMES.map((initRoad) => {
+      const match = saved.find((r) => r.id === initRoad.id);
+      return match ? { ...initRoad, unlocked: match.unlocked || initRoad.unlocked } : initRoad;
+    });
   });
 
   const [selectedRoadIndex, setSelectedRoadIndex] = useState<number>(() => {
@@ -123,8 +133,8 @@ export default function App() {
   const [stats, setStats] = useState<GameStats>({
     score: 0,
     distance: 0,
-    speed: 140,
-    maxSpeed: 140,
+    speed: 115,
+    maxSpeed: 115,
     nitro: 100,
     shields: 0,
     maxShields: 0,
@@ -304,19 +314,34 @@ export default function App() {
     }
   }, [upgrades]);
 
-  // Touch Drag / Swipe for Lane Steering
+  // Sync racing state attribute so ad overlays never steal active gameplay input
+  useEffect(() => {
+    document.body.dataset.racing = gameState === 'playing' ? 'true' : 'false';
+    return () => {
+      document.body.dataset.racing = 'false';
+    };
+  }, [gameState]);
+
+  // Touch Drag / Swipe for Lane Steering (ignores MobileControls buttons to prevent double-steering)
   useEffect(() => {
     let startX = 0;
     let startY = 0;
+    let ignoreSwipe = false;
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 1) {
+      const target = e.target as HTMLElement | null;
+      ignoreSwipe = Boolean(target && target.closest('[data-mobile-control="true"]'));
+      if (!ignoreSwipe && e.touches.length === 1) {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
       }
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
+      if (ignoreSwipe) {
+        ignoreSwipe = false;
+        return;
+      }
       if (!engineRef.current || !engineRef.current.isRunning || engineRef.current.isPaused) return;
       if (e.changedTouches.length === 1) {
         const dx = e.changedTouches[0].clientX - startX;

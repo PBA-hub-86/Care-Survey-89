@@ -23,7 +23,7 @@ class TycoonAudioSystem {
     'হাইওয়ে এফএম ১০২.৪: এক্সপ্রেসওয়ে মেইন লেন একদম ক্লিয়ার, গতি বজায় রাখুন!',
     'হাইওয়ে বুলেটিন: কোস্টাল ওশান রোড ও মাউন্টেন পাস ট্রাফিকের জন্য সম্পূর্ণ উন্মুক্ত।',
     'ট্রাফিক কন্ট্রোল: হাই-স্পিড এক্সপ্রেসওয়েতে নিরাপদ দূরত্ব বজায় রেখে ওভারটেক করুন।',
-    'ওয়েদার সতর্কতা: সামনে বৃষ্টি ও কুয়াশার সম্ভাবনা, পিচ্ছিল রাস্তায় সাবধানে ড্রাইভ করুন।',
+    'হাইওয়ে আপডেট: সকল লেনে দৃষ্টিসীমা ও গ্রিপ ১০০% স্বাভাবিক রয়েছে, দ্রুত ও নিরাপদে ড্রাইভ করুন।',
     'হাইওয়ে মনিটর: সকল জংশন ও ফ্লাইওভার লেন স্বাভাবিক রয়েছে, নির্ধারিত গতি মেনে চলুন।'
   ];
 
@@ -286,7 +286,7 @@ class TycoonAudioSystem {
       noise.connect(filter).connect(gain).connect(this.ctx.destination);
       noise.start(now);
 
-      // Dhaka FM signature chime
+      // Highway FM signature chime
       setTimeout(() => {
         this.tone(880, 0.08, 'triangle', 0.14);
         setTimeout(() => this.tone(1174, 0.12, 'triangle', 0.16), 75);
@@ -462,7 +462,7 @@ class TycoonAudioSystem {
     } catch {}
   }
 
-  // --- DHAKA STREET HONKING & SPATIAL AUDIO SYSTEM ---
+  // --- HIGHWAY STREET HONKING & SPATIAL AUDIO SYSTEM ---
   private pannerNode(pan: number): StereoPannerNode | GainNode | null {
     if (!this.ctx) return null;
     try {
@@ -476,10 +476,10 @@ class TycoonAudioSystem {
   }
 
   /**
-   * Dhaka Bus Air Horn ("পোঁওও-পোঁও!")
-   * Iconic pneumatic dual blast (415Hz + 554Hz) with characteristic mechanical valve puff.
+   * Highway Express Bus Air Horn
+   * Pneumatic dual blast (392Hz + 523Hz) with characteristic air valve punch.
    */
-  public playDhakaBusAirHorn(pan = 0, vol = 0.22) {
+  public playBusAirHorn(pan = 0, vol = 0.22) {
     this.init();
     if (this.isMuted || !this.ctx) return;
     try {
@@ -513,8 +513,8 @@ class TycoonAudioSystem {
   }
 
   /**
-   * Dhaka CNG Auto-Rickshaw Squeaky Horn ("পীপ-পীপ!")
-   * Fast staccato buzzing tweet typical of Bajaj 4-stroke / 2-stroke baby taxis.
+   * Compact Transit Squeaky Horn
+   * Fast staccato dual chirp.
    */
   public playCNGSqueakHorn(pan = 0, vol = 0.18) {
     this.init();
@@ -551,7 +551,7 @@ class TycoonAudioSystem {
   /**
    * Standard Sedan / Taxi Horn
    */
-  public playDhakaCarHorn(pan = 0, vol = 0.16) {
+  public playCarHorn(pan = 0, vol = 0.16) {
     this.init();
     if (this.isMuted || !this.ctx) return;
     try {
@@ -579,7 +579,7 @@ class TycoonAudioSystem {
   /**
    * Spatial traffic honk routed by relative vehicle coordinates
    */
-  public playDhakaTrafficHorn(
+  public playTrafficHorn(
     type: 'bus' | 'truck' | 'suv' | 'cng' | 'police' | 'car',
     relX: number,
     relZ: number
@@ -591,13 +591,13 @@ class TycoonAudioSystem {
     const vol = Math.max(0.05, Math.min(0.3, (1 - dist / 50) * 0.28));
 
     if (type === 'bus' || type === 'truck') {
-      this.playDhakaBusAirHorn(pan, type === 'truck' ? vol * 1.15 : vol);
+      this.playBusAirHorn(pan, type === 'truck' ? vol * 1.15 : vol);
     } else if (type === 'cng') {
       this.playCNGSqueakHorn(pan, vol);
     } else if (type === 'police') {
       this.playSiren();
     } else {
-      this.playDhakaCarHorn(pan, vol);
+      this.playCarHorn(pan, vol);
     }
   }
 

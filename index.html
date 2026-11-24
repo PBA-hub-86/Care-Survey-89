@@ -1,40 +1,50 @@
 <!doctype html>
-<html lang="en" class="h-full w-full overflow-hidden bg-[#02050f]">
+<html lang="bn" class="h-full w-full overflow-hidden bg-[#02050f]">
   <head>
     <meta charset="UTF-8" />
-    <!-- Anti-Click-Hijacking & Redirect Protection: Keeps player inside the game without popunders -->
+    <!-- Gameplay Focus & Redirect Protection: Prevents popups or top-frame redirects during gameplay -->
     <script>
       (function() {
         window.open = function() { return null; };
       })();
     </script>
-    <!-- Ad Script sandboxed to prevent redirect hijacking -->
-    <!-- <script src="https://pl31469779.profitableratecpmnetwork.com/c1/df/7a/c1df7afb28693a7ec862cb9a5cdef6bb.js"></script> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Speed Tycoon 3D — হাইওয়ে কার রেসার ও ইন-গেম শপ</title>
-    <meta name="description" content="3D হাইওয়ে কার রেসিং ও টাইকুন শপ। মাল্টি-লেন হাইওয়ে, ফ্লাইওভার রোড, ডায়নামিক আবহাওয়া এবং সুপারকার রেসিং।" />
-    
-    <!-- OpenGraph & Facebook Share Card -->
+    <meta name="description" content="3D হাইওয়ে কার রেসিং ও টাইকুন শপ। মাল্টি-লেন হাইওয়ে, ফ্লাইওভার রোড, বাস্তবসম্মত ট্রাফিক এবং সুপারকার রেসিং।" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- OpenGraph & Facebook Public Share Card -->
+    <meta property="og:site_name" content="Speed Tycoon 3D" />
+    <meta property="og:locale" content="bn_BD" />
     <meta property="og:title" content="Speed Tycoon 3D — হাইওয়ে কার রেসিং ও টাইকুন শপ" />
-    <meta property="og:description" content="মাল্টি-লেন এক্সপ্রেসওয়েতে সুপারকার ড্রাইভ! ফ্লাইওভার, ওভারপাস, ফুটপাতে পথচারী ও ডায়নামিক আবহাওয়া।" />
-    <meta property="og:type" content="game" />
-    <meta property="og:image" content="/src/assets/images/speed_tycoon_banner_1793961891406.jpg" />
+    <meta property="og:description" content="মাল্টি-লেন এক্সপ্রেসওয়েতে সুপারকার ড্রাইভ! ফ্লাইওভার, ওভারপাস ও হাই-স্পিড রেসিং। এখনই খেলুন ও বন্ধুদের চ্যালেঞ্জ দিন!" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-banner.jpg" />
+    <meta property="og:image:alt" content="Speed Tycoon 3D Highway Supercar Racing" />
     <meta property="og:image:width" content="1280" />
     <meta property="og:image:height" content="720" />
-    
+
     <!-- Twitter Social Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Speed Tycoon 3D — হাইওয়ে কার রেসিং ও টাইকুন শপ" />
-    <meta name="twitter:description" content="মাল্টি-লেন এক্সপ্রেসওয়েতে সুপারকার ড্রাইভ! ফ্লাইওভার, ওভারপাস, ফুটপাতে পথচারী ও ডায়নামিক আবহাওয়া।" />
-    <meta name="twitter:image" content="/src/assets/images/speed_tycoon_banner_1793961891406.jpg" />
-    
+    <meta name="twitter:description" content="মাল্টি-লেন এক্সপ্রেসওয়েতে সুপারকার ড্রাইভ! ফ্লাইওভার, ওভারপাস ও হাই-স্পিড রেসিং।" />
+    <meta name="twitter:image" content="/og-banner.jpg" />
+
     <!-- Profile Icon / Favicon -->
-    <link rel="icon" type="image/jpeg" href="/src/assets/images/speed_tycoon_profile_1793961890654.jpg" />
-    <link rel="apple-touch-icon" href="/src/assets/images/speed_tycoon_profile_1793961890654.jpg" />
+    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
+    <link rel="apple-touch-icon" href="/favicon.jpg" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&family=Hind+Siliguri:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+      #root { position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden; z-index: 10; }
+      #ad-integration-layer { position: fixed; bottom: 0; right: 0; width: 0; height: 0; overflow: visible; z-index: 5; }
+      body[data-racing="true"] > *:not(#root):not(script):not(style) {
+        pointer-events: none !important;
+      }
+    </style>
 
     <!-- Schema.org Game Metadata -->
     <script type="application/ld+json">
@@ -42,16 +52,21 @@
       "@context": "https://schema.org",
       "@type": "VideoGame",
       "name": "Speed Tycoon 3D Highway Racing",
-      "description": "3D highway racing simulator featuring multi-lane expressways, elevated flyovers, dynamic weather, and authentic traffic.",
+      "description": "3D highway racing simulator featuring multi-lane expressways, elevated flyovers, and authentic traffic.",
       "genre": ["Racing", "Simulation", "Action"],
-      "image": "/src/assets/images/speed_tycoon_banner_1793961891406.jpg",
+      "image": "/og-banner.jpg",
       "operatingSystem": "All modern browsers (Web / Mobile)"
     }
     </script>
   </head>
-  <body class="h-full w-full overflow-hidden select-none bg-[#02050f] text-white">
+  <body class="h-full w-full overflow-hidden select-none bg-[#02050f] text-white" data-racing="false">
     <div id="root" class="h-full w-full overflow-hidden"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Non-blocking Ad Integration (isolated from active race inputs) -->
+    <div id="ad-integration-layer" aria-hidden="true">
+      <script data-cfasync="false" async src="https://abscloud.org/1/7816f983c07bdc9092a859434e548848"></script>
+      <script data-cfasync="false" async src="https://bauval.org/14/9afede2f69f7edacf3747b9eb6a2e2bb"></script>
+    </div>
   </body>
 </html>
-

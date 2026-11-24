@@ -33,8 +33,8 @@ export interface RoadTheme {
   dirLightB: number;
   fogColor: number;
   fogDensity: number;
-  skyType: 'daytime' | 'coxsbazar_marine' | 'cyber' | 'tokyo_rain' | 'sahara_sunset' | 'magma' | 'space';
-  weather?: 'none' | 'rain' | 'embers' | 'warp_stars';
+  skyType: 'daytime' | 'coastal_marine' | 'cyber' | 'midnight_neon' | 'sahara_sunset' | 'magma' | 'space';
+  weather?: 'none' | 'embers' | 'warp_stars';
   hasMarineDrive?: boolean;
   hasCurves?: boolean;
 }
@@ -50,15 +50,15 @@ export interface RadioState {
   isMuted: boolean;
 }
 
-export type DynamicWeatherType = 'clear' | 'rain' | 'fog' | 'neon_snow';
+export type DynamicWeatherType = 'clear';
 
 export interface WeatherState {
   type: DynamicWeatherType;
   name: string;
   icon: string;
   effectLabel: string;
-  gripFactor: number; // 1.0 = full grip, 0.78 = wet rain, 0.62 = slippery neon snow
-  bonusMultiplier: number; // +25% in rain, +40% in fog, +50% in neon snow
+  gripFactor: number;
+  bonusMultiplier: number;
 }
 
 export interface GlobalUpgrades {

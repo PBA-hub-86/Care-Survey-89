@@ -13,7 +13,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
   onSetBoost,
 }) => {
   return (
-    <div className="absolute bottom-4 left-0 right-0 px-4 sm:px-8 flex items-end justify-between pointer-events-none z-30 select-none">
+    <div
+      data-mobile-control="true"
+      className="absolute bottom-4 left-0 right-0 px-4 sm:px-8 flex items-end justify-between pointer-events-none z-30 select-none"
+    >
       {/* Steering Arrows */}
       <div className="flex items-center gap-3 pointer-events-auto">
         <button

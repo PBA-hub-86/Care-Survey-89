@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, Trophy, Coins } from 'lucide-react';
 import { sound } from '../audio/sound';
 import confetti from 'canvas-confetti';
@@ -33,6 +33,15 @@ export const LuckySpinModal: React.FC<LuckySpinModalProps> = ({
   const spinCost = 500;
 
   const currentRotationRef = useRef(0);
+  const spinTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (spinTimeoutRef.current !== null) {
+        clearTimeout(spinTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSpin = () => {
     if (spinning) return;
@@ -58,7 +67,12 @@ export const LuckySpinModal: React.FC<LuckySpinModalProps> = ({
     currentRotationRef.current = newTotal;
     setRotation(newTotal);
 
-    setTimeout(() => {
+    if (spinTimeoutRef.current !== null) {
+      clearTimeout(spinTimeoutRef.current);
+    }
+
+    spinTimeoutRef.current = window.setTimeout(() => {
+      spinTimeoutRef.current = null;
       setSpinning(false);
       const prize = SEGMENTS[prizeIdx];
       setWonPrize(prize.label);

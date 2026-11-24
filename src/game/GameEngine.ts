@@ -33,7 +33,7 @@ interface TrafficCar {
 
 interface CashPickup {
   group: THREE.Group;
-  type: 'nitro';
+  type: 'nitro' | 'cash_bundle';
   lane: number;
   z: number;
   value: number;
@@ -173,8 +173,8 @@ export class GameEngine {
   // Metrics
   public score = 0;
   public distance = 0;
-  public speed = 140;
-  public maxSpeedAchieved = 140;
+  public speed = 115;
+  public maxSpeedAchieved = 115;
   public nitro = 100;
   public shields = 0;
   public maxShields = 0;
@@ -197,7 +197,7 @@ export class GameEngine {
 
   // Mission
   public activeMissionIndex = 0;
-  public missions: CashMission[] = [...INITIAL_MISSIONS];
+  public missions: CashMission[] = INITIAL_MISSIONS.map((m) => ({ ...m }));
 
   // Entities
   private traffic: TrafficCar[] = [];
@@ -367,7 +367,7 @@ export class GameEngine {
 
     const isDayLike =
       this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coxsbazar_marine';
+      this.currentTheme.skyType === 'coastal_marine';
 
     if (this.ambientLight) {
       this.ambientLight.color.setHex(this.currentTheme.ambientLight);
@@ -422,7 +422,7 @@ export class GameEngine {
 
     const isDaytime =
       this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coxsbazar_marine';
+      this.currentTheme.skyType === 'coastal_marine';
 
     if (isDaytime) {
       // 1. Realistic Clear Daytime Gradient Sky Dome
@@ -552,7 +552,7 @@ export class GameEngine {
     const isRainTheme = this.currentTheme.weather === 'rain';
     const isDayLike =
       this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coxsbazar_marine';
+      this.currentTheme.skyType === 'coastal_marine';
 
     if (this.currentWeatherType === 'rain') {
       this.targetFogDensity = 0.0088;
@@ -893,12 +893,12 @@ export class GameEngine {
     const length = 1500;
     const isDayLike =
       this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coxsbazar_marine' ||
+      this.currentTheme.skyType === 'coastal_marine' ||
       this.currentTheme.skyType === 'sahara_sunset';
     const isMarine =
       this.currentTheme.hasMarineDrive ||
       this.currentTheme.id === 'road-coastal-marine' ||
-      this.currentTheme.skyType === 'coxsbazar_marine';
+      this.currentTheme.skyType === 'coastal_marine';
 
     // 1. Wide Surrounding Terrain / Embankment Ground Skirt (eliminates floating-road void)
     this.terrainTexBundle = createTerrainTextureSet(this.currentTheme, this.maxAnisotropy);
@@ -1127,8 +1127,8 @@ export class GameEngine {
     this.roadsideTrees = [];
 
     const sky = this.currentTheme.skyType;
-    const isDay = sky === 'daytime' || sky === 'coxsbazar_marine';
-    const isCoastal = sky === 'coxsbazar_marine';
+    const isDay = sky === 'daytime' || sky === 'coastal_marine';
+    const isCoastal = sky === 'coastal_marine';
     const isCanyon = sky === 'sahara_sunset';
     const isMagma = sky === 'magma';
     const isSpace = sky === 'space';
@@ -1347,7 +1347,7 @@ export class GameEngine {
       girder.position.set(0, trackY + 1.1, 0);
       g.add(girder);
 
-      // Green & White Dhaka MRT Side Crash Barriers
+      // Green & White Metro Transit Side Crash Barriers
       [-2.1, 2.1].forEach((gx) => {
         const railWall = new THREE.Mesh(
           new THREE.BoxGeometry(0.2, 0.9, 35.5),
@@ -1370,7 +1370,7 @@ export class GameEngine {
       this.metroRailPillars.push(g);
     }
 
-    // Dhaka MRT Line-6 Train (৪ বগির আধুনিক মেট্রোরেল)
+    // Elevated Metro Express Train (৪ বগির আধুনিক মেট্রোরেল)
     const trainGroup = new THREE.Group();
     const trainLength = 52;
     const trainWidth = 3.2;
@@ -1539,7 +1539,7 @@ export class GameEngine {
     const isMarine =
       this.currentTheme.hasMarineDrive ||
       this.currentTheme.id === 'road-coastal-marine' ||
-      this.currentTheme.skyType === 'coxsbazar_marine';
+      this.currentTheme.skyType === 'coastal_marine';
 
     if (!isMarine) return;
 
@@ -1656,7 +1656,7 @@ export class GameEngine {
     const roadWidth = 11.5;
     const isDayLike =
       this.currentTheme.skyType === 'daytime' ||
-      this.currentTheme.skyType === 'coxsbazar_marine' ||
+      this.currentTheme.skyType === 'coastal_marine' ||
       this.currentTheme.skyType === 'sahara_sunset';
 
     // 1. Photorealistic PBR Elevated Deck Mesh (3 lanes, joints, hazard curbs)
@@ -2090,11 +2090,13 @@ export class GameEngine {
     flagCanvas.width = 120; flagCanvas.height = 70;
     const fctx = flagCanvas.getContext('2d');
     if (fctx) {
-      fctx.fillStyle = '#065f46';
+      fctx.fillStyle = '#0284c7';
       fctx.fillRect(0, 0, 120, 70);
-      fctx.fillStyle = '#dc2626';
+      fctx.fillStyle = '#ffffff';
+      fctx.fillRect(0, 26, 120, 18);
+      fctx.fillStyle = '#f59e0b';
       fctx.beginPath();
-      fctx.arc(50, 35, 20, 0, Math.PI * 2);
+      fctx.arc(60, 35, 11, 0, Math.PI * 2);
       fctx.fill();
     }
     const flagTex = new THREE.CanvasTexture(flagCanvas);
@@ -2402,7 +2404,7 @@ export class GameEngine {
     const h = 0.65;
     const l = 4.0;
 
-    // Bangladesh Police White Body
+    // Highway Patrol White Body
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.85, roughness: 0.2 });
     const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), bodyMat);
     body.position.y = h / 2 + 0.22;
@@ -2526,9 +2528,9 @@ export class GameEngine {
     const occupiedInBand = new Set<number>();
 
     for (const t of this.traffic) {
-      if (t.group.position.z < -180) {
+      if (t.group.position.z < -170) {
         occupiedInBand.add(t.lane);
-        if (Math.abs(t.group.position.z - -260) < 36) {
+        if (Math.abs(t.group.position.z - -260) < 40) {
           occupiedNearSpawn.add(t.lane);
         }
       }
@@ -2540,13 +2542,14 @@ export class GameEngine {
     const freeLanes = allLanes.filter((l) => !occupiedNearSpawn.has(l));
     if (freeLanes.length === 0) return;
 
+    const level = Math.max(1, Math.floor(this.distance / 700) + 1);
     const lane = freeLanes[Math.floor(Math.random() * freeLanes.length)];
-    const isPolice = !this.policeActive && Math.random() < 0.12;
+    const isPolice = !this.policeActive && Math.random() < Math.min(0.22, 0.12 + (level - 1) * 0.015);
 
     let group: THREE.Group;
     let w = 1.75;
     let l = 3.9;
-    let vehicleSpeed = 70 + Math.random() * 45;
+    let vehicleSpeed = 75 + Math.random() * 52 + Math.min(28, (level - 1) * 4);
     let lights: { r: THREE.PointLight; b: THREE.PointLight } | undefined;
     let vehicleType: 'bus' | 'truck' | 'police' | 'car' | 'suv' = 'car';
 
@@ -2556,31 +2559,31 @@ export class GameEngine {
       group = policeRes.group;
       lights = policeRes.lights;
       w = 1.78; l = 4.0;
-      vehicleSpeed = 90 + Math.random() * 35;
+      vehicleSpeed = 95 + Math.random() * 42 + Math.min(25, (level - 1) * 3);
     } else {
       const typeRoll = Math.random();
       if (typeRoll < 0.28) {
         vehicleType = 'bus';
         group = HighwayVehicles.createHighwayExpressCoach();
         w = 2.5; l = 8.2;
-        vehicleSpeed = 68 + Math.random() * 25;
+        vehicleSpeed = 70 + Math.random() * 28 + Math.min(20, (level - 1) * 2.5);
       } else if (typeRoll < 0.52) {
         vehicleType = 'truck';
         group = HighwayVehicles.createSemiTruckTrailer();
         w = 2.6; l = 12.8;
-        vehicleSpeed = 55 + Math.random() * 20;
+        vehicleSpeed = 58 + Math.random() * 24 + Math.min(18, (level - 1) * 2);
       } else if (typeRoll < 0.76) {
         vehicleType = 'suv';
         group = HighwayVehicles.createHighwaySUV();
         w = 1.95; l = 4.5;
-        vehicleSpeed = 82 + Math.random() * 35;
+        vehicleSpeed = 85 + Math.random() * 40 + Math.min(25, (level - 1) * 3);
       } else {
         vehicleType = 'car';
         const paints = [0xd32f2f, 0x1976d2, 0xf8fafc, 0xf59e0b, 0x1e293b, 0x475569];
         const carPaint = paints[Math.floor(Math.random() * paints.length)];
         group = this.createCivilianCar(carPaint, false);
         w = 1.75; l = 3.9;
-        vehicleSpeed = 85 + Math.random() * 35;
+        vehicleSpeed = 88 + Math.random() * 42 + Math.min(28, (level - 1) * 3.5);
       }
     }
 
@@ -2593,7 +2596,7 @@ export class GameEngine {
       lane,
       currentX: lane * this.laneWidth,
       targetLane: lane,
-      laneChangeTimer: 3.5 + Math.random() * 6.5,
+      laneChangeTimer: Math.max(2.2, 4.8 - level * 0.22) + Math.random() * 4.5,
       speed: vehicleSpeed,
       isPolice,
       policeLights: lights,
@@ -2605,42 +2608,99 @@ export class GameEngine {
     });
   }
 
-  // --- CLEAN NITRO POWERUP SPAWNER (NO SCREEN-BLOCKING POPUPS) ---
+  // --- CLEAN CASH BUNDLE & NITRO POWERUP SPAWNER ---
   private spawnCashPickup() {
-    const lane = Math.floor(Math.random() * 5) - 2;
+    const allLanes = [-2, -1, 0, 1, 2];
+    const blockedLanes = new Set<number>();
+    for (const t of this.traffic) {
+      if (Math.abs(t.group.position.z - -240) < t.length * 0.65 + 10) {
+        blockedLanes.add(t.lane);
+        blockedLanes.add(t.targetLane);
+      }
+    }
+    const openLanes = allLanes.filter((l) => !blockedLanes.has(l));
+    const pool = openLanes.length > 0 ? openLanes : allLanes;
+    const lane = pool[Math.floor(Math.random() * pool.length)];
+    const isCashBundle = Math.random() < 0.65;
     const group = new THREE.Group();
 
-    // High-tech Cyan Nitro Fuel Cell
-    const canister = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.32, 0.32, 1.1, 16),
-      new THREE.MeshStandardMaterial({
-        color: 0x00ffff,
-        emissive: 0x00ffff,
-        emissiveIntensity: 0.65,
-        metalness: 0.8,
-        roughness: 0.2,
-      })
-    );
-    group.add(canister);
+    if (isCashBundle) {
+      // Golden / Emerald Cash Stack Bundle
+      const stack = new THREE.Mesh(
+        new THREE.BoxGeometry(0.95, 0.42, 0.58),
+        new THREE.MeshStandardMaterial({
+          color: 0x10b981,
+          emissive: 0x059669,
+          emissiveIntensity: 0.7,
+          metalness: 0.45,
+          roughness: 0.25,
+        })
+      );
+      group.add(stack);
 
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.55, 0.05, 8, 16),
-      new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-    );
-    ring.rotation.x = Math.PI / 2;
-    group.add(ring);
+      const band = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.46, 0.62),
+        new THREE.MeshStandardMaterial({
+          color: 0xfacc15,
+          emissive: 0xeab308,
+          emissiveIntensity: 0.5,
+          metalness: 0.8,
+          roughness: 0.2,
+        })
+      );
+      group.add(band);
 
-    group.position.set(lane * this.laneWidth, 0.85, -240);
-    this.scene.add(group);
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.62, 0.05, 8, 16),
+        new THREE.MeshBasicMaterial({ color: 0x34d399 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
 
-    this.pickups.push({
-      group,
-      type: 'nitro',
-      lane,
-      z: -240,
-      value: 100,
-      active: true,
-    });
+      group.position.set(lane * this.laneWidth, 0.85, -240);
+      this.scene.add(group);
+
+      this.pickups.push({
+        group,
+        type: 'cash_bundle',
+        lane,
+        z: -240,
+        value: 180,
+        active: true,
+      });
+    } else {
+      // High-tech Cyan Nitro Fuel Cell
+      const canister = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.32, 0.32, 1.1, 16),
+        new THREE.MeshStandardMaterial({
+          color: 0x00ffff,
+          emissive: 0x00ffff,
+          emissiveIntensity: 0.65,
+          metalness: 0.8,
+          roughness: 0.2,
+        })
+      );
+      group.add(canister);
+
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.55, 0.05, 8, 16),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+
+      group.position.set(lane * this.laneWidth, 0.85, -240);
+      this.scene.add(group);
+
+      this.pickups.push({
+        group,
+        type: 'nitro',
+        lane,
+        z: -240,
+        value: 80,
+        active: true,
+      });
+    }
   }
 
   // --- CONTROLS ---
@@ -2687,15 +2747,19 @@ export class GameEngine {
     if (!this.isRunning) return;
 
     if (e.key === 'ArrowLeft' || k === 'a') {
+      if (e.repeat) return;
       this.moveLeft();
     } else if (e.key === 'ArrowRight' || k === 'd') {
+      if (e.repeat) return;
       this.moveRight();
     } else if (e.key === 'ArrowUp' || k === 'w' || e.key === 'Shift') {
       this.setBoost(true);
     } else if (e.key === 'Escape' || e.key === ' ') {
+      if (e.repeat) return;
       e.preventDefault();
       this.togglePause();
     } else if (k === 'r') {
+      if (e.repeat) return;
       sound.cycleRadioStation();
     }
   };
@@ -2757,8 +2821,8 @@ export class GameEngine {
 
     this.score = 0;
     this.distance = 0;
-    this.speed = 140;
-    this.maxSpeedAchieved = 140;
+    this.speed = 115;
+    this.maxSpeedAchieved = 115;
     this.nitro = 100;
     this.shields = 0;
     this.maxShields = 0;
@@ -2777,6 +2841,8 @@ export class GameEngine {
     this.policeActive = false;
     this.invulnerableTimer = 0;
     this.lightningTimer = 4.0;
+    this.activeMissionIndex = 0;
+    this.missions = INITIAL_MISSIONS.map((m) => ({ ...m }));
 
     this.traffic.forEach((t) => this.disposeObject(t.group));
     this.traffic = [];
@@ -2803,7 +2869,7 @@ export class GameEngine {
     this.currentWeatherType = 'clear';
     this.weatherTimer = 0;
     this.weatherDuration = 0;
-    this.nextWeatherInterval = 18 + Math.random() * 12;
+    this.nextWeatherInterval = 15 + Math.random() * 10;
     this.weatherAlert = null;
     this.weatherAlertTimer = 0;
     this.updateWeatherTargets();
@@ -2936,8 +3002,9 @@ export class GameEngine {
 
     const weather = this.getWeatherState();
 
-    // Global Upgrades calculation
-    const engineUpgradeBonus = (this.upgrades.engineLevel - 1) * 16;
+    // Global Upgrades calculation (exact match with UPGRADE_TIERS)
+    const engineUpgradeBonuses = [0, 15, 30, 50, 75];
+    const engineUpgradeBonus = engineUpgradeBonuses[Math.min(4, Math.max(0, this.upgrades.engineLevel - 1))];
     const nitroUpgradeBonus = (this.upgrades.nitroLevel - 1) * 18;
     const gripUpgradeBonus = (this.upgrades.shieldLevel - 1) * 0.05;
     const steeringUpgradeMultiplier = 1 + (this.upgrades.shieldLevel - 1) * 0.12;
@@ -2946,10 +3013,10 @@ export class GameEngine {
     const boostPower = this.activeCar.nitroBoost + nitroUpgradeBonus;
     const multiplierBonus = 1 + (this.upgrades.multiplierLevel - 1) * 0.25;
 
-    const level = Math.max(1, Math.floor(this.distance / 800) + 1);
-    const difficulty = Math.min(2.6, 1 + (level - 1) * 0.14 + this.distance / 3200);
+    const level = Math.max(1, Math.floor(this.distance / 700) + 1);
+    const speedRatio = Math.min(1.0, 0.75 + (level - 1) * 0.035 + this.distance / 12000);
     const grip = Math.min(1.0, weather.gripFactor + gripUpgradeBonus);
-    let targetSpeed = baseTop * (0.68 + 0.32 * difficulty) * (0.90 + 0.10 * grip);
+    let targetSpeed = baseTop * speedRatio * (0.92 + 0.08 * grip);
 
     if (this.isBoosting && this.nitro > 0) {
       targetSpeed += boostPower;
@@ -2961,12 +3028,13 @@ export class GameEngine {
       this.nitro = Math.min(100, this.nitro + dt * chargeRate);
     }
 
-    this.speed += (targetSpeed - this.speed) * Math.min(1, dt * (this.isBoosting ? 4.8 : 2.2));
+    const accelFactor = (this.activeCar.accel || 90) / 90;
+    this.speed += (targetSpeed - this.speed) * Math.min(1, dt * (this.isBoosting ? 4.2 : 1.6 * accelFactor));
     this.maxSpeedAchieved = Math.max(this.maxSpeedAchieved, this.speed);
-    sound.updateEngine(this.speed / 380, this.isBoosting);
+    sound.updateEngine(Math.min(1.4, this.speed / 400), this.isBoosting);
 
     // Dynamic speed FOV & spinning car wheels
-    const targetFov = Math.min(76, 65 + Math.max(0, (this.speed - 140) / 30) + (this.isBoosting ? 4.5 : 0));
+    const targetFov = Math.min(76, 65 + Math.max(0, (this.speed - 115) / 28) + (this.isBoosting ? 4.5 : 0));
     if (Math.abs(targetFov - this.currentFov) > 0.05) {
       this.currentFov += (targetFov - this.currentFov) * Math.min(1, dt * 5.0);
       this.camera.fov = this.currentFov;
@@ -2980,7 +3048,7 @@ export class GameEngine {
     if (this.headlightPoolMesh) {
       const isNight =
         this.currentTheme.skyType !== 'daytime' &&
-        this.currentTheme.skyType !== 'coxsbazar_marine';
+        this.currentTheme.skyType !== 'coastal_marine';
       const beamOp =
         this.currentWeatherType === 'fog' || this.currentWeatherType === 'rain'
           ? 0.68
@@ -3325,16 +3393,16 @@ export class GameEngine {
       this.weatherParticles.geometry.attributes.position.needsUpdate = true;
     }
 
-    // Spawners (progressive level scaling)
+    // Spawners (challenging progressive level scaling without impossible speed spikes)
     this.spawnTimer += dt;
-    const spawnInterval = Math.max(0.55, 1.15 - (level - 1) * 0.055 - this.distance / 11000);
+    const spawnInterval = Math.max(0.42, 1.05 - (level - 1) * 0.06 - this.distance / 10000);
     if (this.spawnTimer > spawnInterval) {
       this.spawnTraffic();
       this.spawnTimer = 0;
     }
 
     this.pickupTimer += dt;
-    if (this.pickupTimer > 2.6) {
+    if (this.pickupTimer > 2.4) {
       this.spawnCashPickup();
       this.pickupTimer = 0;
     }
@@ -3355,11 +3423,11 @@ export class GameEngine {
     // Traffic Update
     for (let i = this.traffic.length - 1; i >= 0; i--) {
       const t = this.traffic[i];
-      const relSpeed = (this.speed - t.speed) * 0.055 + 9;
+      const relSpeed = Math.max(4.5, (this.speed - t.speed) * 0.052 + 6.5);
 
-      // Safe multi-lane navigation (only switch into an unobstructed adjacent lane)
+      // Safe multi-lane navigation (only switch well ahead of player into an unobstructed adjacent lane)
       t.laneChangeTimer -= dt;
-      if (t.laneChangeTimer <= 0 && Math.abs(t.group.position.z - pz) > 18) {
+      if (t.laneChangeTimer <= 0 && Math.abs(t.group.position.z - pz) > 32) {
         const shift = Math.random() > 0.5 ? 1 : -1;
         const candidateLane = Math.max(-2, Math.min(2, t.lane + shift));
         if (candidateLane !== t.lane) {
@@ -3367,22 +3435,23 @@ export class GameEngine {
             (other) =>
               other !== t &&
               (other.lane === candidateLane || other.targetLane === candidateLane) &&
-              Math.abs(other.group.position.z - t.group.position.z) < (t.length + other.length) * 0.65 + 10
+              Math.abs(other.group.position.z - t.group.position.z) < (t.length + other.length) * 0.7 + 12
           );
           if (!blocked) {
             t.targetLane = candidateLane;
             t.lane = candidateLane;
           }
         }
-        t.laneChangeTimer = 4.5 + Math.random() * 7.5;
+        t.laneChangeTimer = Math.max(2.2, 4.8 - level * 0.22) + Math.random() * 4.5;
       }
       const targetLaneX = t.targetLane * this.laneWidth;
-      t.currentX += (targetLaneX - t.currentX) * Math.min(1, dt * 2.2);
+      const laneDx = targetLaneX - t.currentX;
+      t.currentX += laneDx * Math.min(1, dt * 2.6);
 
       t.group.position.z += relSpeed * dt;
       t.group.position.x = t.currentX + this.getRoadCurveX(t.group.position.z);
       const dCurve = this.getRoadCurveX(t.group.position.z - 3) - this.getRoadCurveX(t.group.position.z + 3);
-      t.group.rotation.y = Math.atan2(dCurve, 6);
+      t.group.rotation.y = Math.atan2(dCurve, 6) - laneDx * 0.04;
 
       if (t.isPolice && t.policeLights) {
         t.cycle += dt * 14;
@@ -3393,13 +3462,13 @@ export class GameEngine {
 
       const cx = Math.abs(px - t.group.position.x);
       const cz = Math.abs(pz - t.group.position.z);
-      const hitX = t.width * 0.44 + 0.85;
-      const hitZ = t.length * 0.44 + 1.95;
+      const hitX = t.width * 0.45 + 0.88;
+      const hitZ = t.length * 0.45 + 2.0;
 
       // Risky Overtake / Near-Miss Bonus (accurate for trucks, buses, SUVs & cars)
       if (!t.passed && t.group.position.z - t.length * 0.42 > pz) {
         t.passed = true;
-        if (cx >= hitX && cx < hitX + 1.75) {
+        if (cx >= hitX && cx < hitX + 1.55) {
           this.combo = Math.min(8, this.combo + 1);
           this.comboTimer = 3.8;
           this.nearMisses++;
@@ -3423,7 +3492,7 @@ export class GameEngine {
       }
     }
 
-    // Spatial Traffic Audio & Street Traffic Horns
+    // Spatial Traffic Audio & Highway Traffic Horns
     this.trafficHornTimer -= dt;
     this.spatialAudioTimer += dt;
     if (this.spatialAudioTimer > 0.1) {
@@ -3447,12 +3516,12 @@ export class GameEngine {
 
       // Traffic honks randomly as player approaches within 42m
       if (this.trafficHornTimer <= 0 && closestDist < 42) {
-        sound.playDhakaTrafficHorn(closestType, closestRelX, closestRelZ);
+        sound.playTrafficHorn(closestType, closestRelX, closestRelZ);
         this.trafficHornTimer = 2.4 + Math.random() * 3.6;
       }
     }
 
-    // Update Nitro Powerups (with magnet pull radius upgrade & no blocking text)
+    // Update Cash Bundles & Nitro Powerups (with magnet pull radius upgrade)
     const magnetPullRadius = 2.8 + (this.upgrades.magnetLevel - 1) * 2.2;
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const p = this.pickups[i];
@@ -3470,10 +3539,19 @@ export class GameEngine {
         }
         if (distToCar < 2.5) {
           p.active = false;
-          sound.tone(600, 0.1, 'sine', 0.15);
-          this.nitro = 100;
-          this.score += 200;
-          this.cashCollectedThisRun += Math.round(90 * multiplierBonus);
+          if (p.type === 'cash_bundle') {
+            sound.playCashCollect();
+            const earned = Math.round(p.value * multiplierBonus);
+            this.cashCollectedThisRun += earned;
+            this.score += 250;
+            this.checkMissionProgress('cash_collect', 1);
+            this.onCashCollected(earned, `+৳${earned}`);
+          } else {
+            sound.tone(600, 0.1, 'sine', 0.15);
+            this.nitro = 100;
+            this.score += 200;
+            this.cashCollectedThisRun += Math.round(p.value * multiplierBonus);
+          }
           this.disposeObject(p.group);
           this.pickups.splice(i, 1);
           continue;

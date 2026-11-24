@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RunSummary } from '../types/game';
 import confetti from 'canvas-confetti';
-import { RotateCcw, ShoppingBag, Gauge, Crosshair, Home, Film } from 'lucide-react';
+import { RotateCcw, ShoppingBag, Gauge, Crosshair, Home, Film, Share2, Check } from 'lucide-react';
 import { submitScore } from '../lib/firebase';
 
 interface GameOverModalProps {
@@ -22,6 +22,31 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onWatchReplay,
 }) => {
   const submittedRef = useRef<RunSummary | null>(null);
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  const handleShareScore = async () => {
+    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const text = `🏎️ Speed Tycoon 3D-তে আমার স্কোর ${summary.score.toLocaleString()}! দূরত্ব ${summary.distance.toLocaleString()}m, টপ স্পিড ${summary.maxSpeed} KM/H। আমার রেকর্ড ভাঙতে পারবে?`;
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({
+          title: 'Speed Tycoon 3D — হাইওয়ে কার রেসার',
+          text,
+          url: shareUrl,
+        });
+        return;
+      }
+    } catch {
+      // Fall back to clipboard copy if share sheet was dismissed or unsupported
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${text} ${shareUrl}`);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2500);
+    } catch {}
+  };
 
   useEffect(() => {
     // Submit score to Firebase Firestore Leaderboard once per run
@@ -76,13 +101,13 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border border-emerald-500/60 rounded-2xl p-3.5 flex items-center justify-between text-left font-mono">
           <div>
             <div className="text-[10px] text-emerald-400 uppercase font-bold">এই রেসে মোট ইনকাম:</div>
-            <div className="text-2xl font-black text-emerald-300 drop-shadow-[0_0_10px_rgba(0,230,118,0.5)]">
+            <div className="text-2xl font-black text-emerald-300 drop-shadow-[0_0_10px_rgba(0,230,118,0.5)] tabular-nums">
               + ৳ {summary.cashEarned.toLocaleString()}
             </div>
           </div>
           <div className="text-right">
             <div className="text-[9px] text-slate-400">মোট ওয়ালেট ব্যালেন্স:</div>
-            <div className="text-sm font-bold text-white">৳ {walletBalance.toLocaleString()}</div>
+            <div className="text-sm font-bold text-white tabular-nums">৳ {walletBalance.toLocaleString()}</div>
           </div>
         </div>
 
@@ -137,6 +162,21 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 hover:from-cyan-300 hover:to-pink-400 text-black font-black font-mono tracking-wider flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(0,234,255,0.4)] transition-transform active:scale-98 cursor-pointer"
           >
             <RotateCcw className="w-5 h-5" /> আবার খেলুন (RETRY RACE)
+          </button>
+
+          <button
+            onClick={handleShareScore}
+            className="w-full py-2.5 rounded-2xl bg-blue-950/80 border border-blue-500/60 hover:border-blue-400 text-blue-200 font-mono text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          >
+            {copiedShare ? (
+              <>
+                <Check className="w-4 h-4 text-emerald-400" /> স্কোর ও লিংক কপি হয়েছে! ফেসবুকে শেয়ার করুন
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4" /> বন্ধুদের চ্যালেঞ্জ দিন (Share Score)
+              </>
+            )}
           </button>
 
           <div className="grid grid-cols-2 gap-2">

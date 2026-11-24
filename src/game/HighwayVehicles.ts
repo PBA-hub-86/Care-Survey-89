@@ -97,9 +97,11 @@ export class HighwayVehicles {
       dctx.font = 'bold 26px sans-serif';
       dctx.fillText('HIGHWAY TRANSIT COACH', 256, 84);
     }
+    const destTex = new THREE.CanvasTexture(destCanvas);
+    destTex.colorSpace = THREE.SRGBColorSpace;
     const destSign = new THREE.Mesh(
       new THREE.PlaneGeometry(2.0, 0.48),
-      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(destCanvas) })
+      new THREE.MeshBasicMaterial({ map: destTex })
     );
     destSign.position.set(0, 2.56, -l / 2 - 0.16);
     group.add(destSign);

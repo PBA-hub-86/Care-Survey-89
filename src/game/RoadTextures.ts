@@ -69,7 +69,7 @@ export function createHighwayRoadTextureSet(
 
   const isDayOrNatural =
     theme.skyType === 'daytime' ||
-    theme.skyType === 'coxsbazar_marine' ||
+    theme.skyType === 'coastal_marine' ||
     theme.skyType === 'sahara_sunset';
 
   const baseRgb = hexToRgb(theme.roadColor);
@@ -93,8 +93,8 @@ export function createHighwayRoadTextureSet(
   bctx.fillStyle = 'rgb(128,128,128)';
   bctx.fillRect(0, 0, width, height);
 
-  // Higher values = rougher tarmac
-  rctx.fillStyle = theme.weather === 'rain' ? 'rgb(95,95,95)' : 'rgb(200,200,200)';
+  // Higher values = clean matte/semi-sheen highway tarmac (no rain gloss)
+  rctx.fillStyle = 'rgb(200,200,200)';
   rctx.fillRect(0, 0, width, height);
 
   // Map road X in [-15, +15] to canvas U in [0, width]
@@ -258,16 +258,15 @@ export function createHighwayRoadTextureSet(
     actx.stroke();
   }
 
-  // 8. Realistic Rain Puddle Patches in roughnessMap for specular reflections
-  for (let p = 0; p < 14; p++) {
+  // Clean dry highway tarmac subtle wear variation (no rain puddles)
+  for (let p = 0; p < 10; p++) {
     const px = xToPx(-7.5 + rand() * 15);
     const py = rand() * height;
-    const rx = 18 + rand() * 26;
-    const ry = 45 + rand() * 80;
+    const rx = 18 + rand() * 24;
+    const ry = 40 + rand() * 70;
     const pGrad = rctx.createRadialGradient(px, py, 2, px, py, Math.max(rx, ry));
-    pGrad.addColorStop(0, 'rgba(12,12,12,0.95)');
-    pGrad.addColorStop(0.6, 'rgba(30,30,30,0.6)');
-    pGrad.addColorStop(1, 'rgba(120,120,120,0)');
+    pGrad.addColorStop(0, 'rgba(155,155,155,0.45)');
+    pGrad.addColorStop(1, 'rgba(200,200,200,0)');
     rctx.fillStyle = pGrad;
     rctx.beginPath();
     rctx.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2);
@@ -332,7 +331,7 @@ export function createFlyoverTextureSet(
 
   const isDayOrNatural =
     theme.skyType === 'daytime' ||
-    theme.skyType === 'coxsbazar_marine' ||
+    theme.skyType === 'coastal_marine' ||
     theme.skyType === 'sahara_sunset';
 
   const base = isDayOrNatural ? { r: 54, g: 58, b: 66 } : { r: 24, g: 28, b: 40 };
@@ -444,7 +443,7 @@ export function createTerrainTextureSet(
   let accent = '#2e5929';
   let gridLine: string | null = null;
 
-  if (theme.skyType === 'daytime' || theme.skyType === 'coxsbazar_marine') {
+  if (theme.skyType === 'daytime' || theme.skyType === 'coastal_marine') {
     bg = '#2c4c27';
     accent = '#3f6a34';
   } else if (theme.skyType === 'sahara_sunset') {
@@ -560,6 +559,27 @@ export function createHeadlightBeamTexture(): THREE.CanvasTexture {
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * Generates a soft elliptical neon glow halo projected under the player car so underglow skins read clearly.
+ */
+export function createUnderglowHaloTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  const grad = ctx.createRadialGradient(64, 128, 10, 64, 128, 120);
+  grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  grad.addColorStop(0.45, 'rgba(255, 255, 255, 0.55)');
+  grad.addColorStop(0.8, 'rgba(255, 255, 255, 0.15)');
+  grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 256);
+
+  const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
   return tex;
 }

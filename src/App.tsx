@@ -78,7 +78,7 @@ export default function App() {
 
   // Persistence: In-Game Wallet Balance (Secured against browser console hacking)
   const [walletBalance, setWalletBalance] = useState<number>(() => {
-    return loadSecure<number>('st3d_wallet_sec_v5', 3000); // ৳3,000 Starter Cash!
+    return loadSecure<number>('st3d_wallet_sec_v5', 1200); // ৳1,200 Balanced Starter Cash
   });
 
   const [highScore, setHighScore] = useState<number>(() => {
@@ -100,7 +100,7 @@ export default function App() {
   const [showShop, setShowShop] = useState<boolean>(false);
   const [shopTab, setShopTab] = useState<'cars' | 'roads' | 'upgrades' | 'neon'>('cars');
   const [showLuckySpin, setShowLuckySpin] = useState<boolean>(false);
-  const [freeSpinAvailable, setFreeSpinAvailable] = useState<boolean>(true);
+  const [freeSpinAvailable, setFreeSpinAvailable] = useState<boolean>(false);
   const [, setRunCount] = useState<number>(0);
   const [isMuted, setIsMuted] = useState<boolean>(sound.isMuted);
   const [isReplaying, setIsReplaying] = useState<boolean>(false);
@@ -526,9 +526,6 @@ export default function App() {
         className="fixed inset-0 w-full h-full block z-0"
       />
 
-      {/* Retro Cyberpunk Scanlines */}
-      <div className="fixed inset-0 pointer-events-none z-10 opacity-20 bg-[linear-gradient(rgba(255,255,255,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px]" />
-
       {/* In-Game HUD & Mobile Touch Controls */}
       {gameState === 'playing' && (
         <>
@@ -543,6 +540,7 @@ export default function App() {
             onMoveLeft={() => engineRef.current?.moveLeft()}
             onMoveRight={() => engineRef.current?.moveRight()}
             onSetBoost={(b) => engineRef.current?.setBoost(b)}
+            onSetBrake={(b) => engineRef.current?.setBrake(b)}
           />
         </>
       )}
@@ -612,7 +610,7 @@ export default function App() {
       {/* Cinematic 3D Replay Overlay */}
       {isReplaying && (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/85 border border-cyan-400 text-white font-mono text-xs font-bold flex items-center gap-2.5 shadow-[0_0_25px_rgba(0,234,255,0.6)]">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
           <span>🎬 ৩ডি সিনেমাটিক রিপ্লে চলছে...</span>
           <button
             onClick={() => {

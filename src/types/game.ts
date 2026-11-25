@@ -34,7 +34,7 @@ export interface RoadTheme {
   fogColor: number;
   fogDensity: number;
   skyType: 'daytime' | 'coastal_marine' | 'cyber' | 'midnight_neon' | 'sahara_sunset' | 'magma' | 'space';
-  weather?: 'none' | 'embers' | 'warp_stars';
+  weather?: 'none';
   hasMarineDrive?: boolean;
   hasCurves?: boolean;
 }

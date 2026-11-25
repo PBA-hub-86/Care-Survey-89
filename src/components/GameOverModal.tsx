@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RunSummary } from '../types/game';
-import confetti from 'canvas-confetti';
 import { RotateCcw, ShoppingBag, Gauge, Crosshair, Home, Film, Share2, Check } from 'lucide-react';
 import { submitScore } from '../lib/firebase';
 
@@ -62,17 +61,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         // Error is already logged cleanly via handleFirestoreError
       });
     }
-
-    if (summary.isNewRecord || summary.cashEarned >= 2000) {
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#00e676', '#00eaff', '#ffd700', '#ff0077'],
-        });
-      } catch {}
-    }
   }, [summary]);
 
   return (
@@ -92,7 +80,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </div>
 
         {summary.isNewRecord && (
-          <div className="py-1.5 px-4 rounded-full bg-gradient-to-r from-amber-500 to-pink-500 text-black font-mono font-black text-xs shadow-[0_0_20px_rgba(255,170,0,0.6)] animate-pulse">
+          <div className="py-1.5 px-4 rounded-full bg-gradient-to-r from-amber-500 to-pink-500 text-black font-mono font-black text-xs shadow-[0_0_16px_rgba(255,170,0,0.45)]">
             🏆 নতুন হাই-স্কোর রেকর্ড!
           </div>
         )}

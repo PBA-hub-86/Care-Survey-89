@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, Trophy, Coins } from 'lucide-react';
 import { sound } from '../audio/sound';
-import confetti from 'canvas-confetti';
 
 interface LuckySpinModalProps {
   balance: number;
@@ -11,14 +10,14 @@ interface LuckySpinModalProps {
 }
 
 const SEGMENTS = [
-  { label: '৳ ১০,০০০', type: 'cash', value: 10000, color: '#f59e0b', textColor: '#000' },
-  { label: '৳ ১,০০০', type: 'cash', value: 1000, color: '#06b6d4', textColor: '#fff' },
-  { label: '🏎️ টার্বো + ৳১,৫০০', type: 'cash', value: 1500, color: '#3b82f6', textColor: '#fff' },
-  { label: '৳ ৫,০০০', type: 'cash', value: 5000, color: '#10b981', textColor: '#000' },
-  { label: '৳ ৫০০', type: 'cash', value: 500, color: '#64748b', textColor: '#fff' },
-  { label: '⚡ নাইট্রো + ৳২,০০০', type: 'cash', value: 2000, color: '#ec4899', textColor: '#fff' },
-  { label: '৳ ২,৫০০', type: 'cash', value: 2500, color: '#8b5cf6', textColor: '#fff' },
-  { label: '৳ ৮,০০০ জ্যাকপট', type: 'cash', value: 8000, color: '#eab308', textColor: '#000' },
+  { label: '৳ ২,৫০০', type: 'cash', value: 2500, color: '#f59e0b', textColor: '#000' },
+  { label: '৳ ৩৫০', type: 'cash', value: 350, color: '#06b6d4', textColor: '#fff' },
+  { label: '৳ ৫০০', type: 'cash', value: 500, color: '#3b82f6', textColor: '#fff' },
+  { label: '৳ ১,০০০', type: 'cash', value: 1000, color: '#10b981', textColor: '#000' },
+  { label: '৳ ২০০', type: 'cash', value: 200, color: '#64748b', textColor: '#fff' },
+  { label: '৳ ৭৫০', type: 'cash', value: 750, color: '#ec4899', textColor: '#fff' },
+  { label: '৳ ১,২৫০', type: 'cash', value: 1250, color: '#8b5cf6', textColor: '#fff' },
+  { label: '৳ ১,৫০০ বোনাস', type: 'cash', value: 1500, color: '#eab308', textColor: '#000' },
 ];
 
 export const LuckySpinModal: React.FC<LuckySpinModalProps> = ({
@@ -30,7 +29,7 @@ export const LuckySpinModal: React.FC<LuckySpinModalProps> = ({
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [wonPrize, setWonPrize] = useState<string | null>(null);
-  const spinCost = 500;
+  const spinCost = 600;
 
   const currentRotationRef = useRef(0);
   const spinTimeoutRef = useRef<number | null>(null);
@@ -78,14 +77,6 @@ export const LuckySpinModal: React.FC<LuckySpinModalProps> = ({
       setWonPrize(prize.label);
 
       sound.playBuySuccess();
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.55 },
-        });
-      } catch {}
-
       onReward(prize.value, prize.label, costPaid);
     }, 4200);
   };
@@ -151,8 +142,8 @@ export const LuckySpinModal: React.FC<LuckySpinModalProps> = ({
 
         {/* Result Announcement */}
         {wonPrize && (
-          <div className="mb-3 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-400 text-amber-300 font-mono font-bold text-sm animate-bounce">
-            🎉 অভিনন্দন! আপনি জিতেছেন: {wonPrize}!
+          <div className="mb-3 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-400 text-amber-300 font-mono font-bold text-sm">
+            অভিনন্দন! আপনি জিতেছেন: {wonPrize}!
           </div>
         )}
 

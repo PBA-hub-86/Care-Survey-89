@@ -9,7 +9,6 @@ import {
   Radio,
   Siren,
   Target,
-  Sun,
 } from 'lucide-react';
 
 interface HUDProps {
@@ -32,17 +31,13 @@ export const HUD: React.FC<HUDProps> = ({
     ? Math.min(100, Math.round((mission.progress / Math.max(1, mission.target)) * 100))
     : 0;
 
-  const renderWeatherIcon = () => (
-    <Sun className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-  );
-
   return (
     <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-2.5 sm:p-4 select-none font-sans">
       {/* Top Telemetry Bar (Center viewport remains 100% unobstructed) */}
       <div className="w-full max-w-5xl mx-auto flex flex-col gap-1.5">
         <div
           className={`bg-[#030615f4] border rounded-2xl p-2 sm:p-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.65)] flex items-center justify-between gap-2 sm:gap-3 ${
-            stats.policeActive ? 'border-red-500 animate-pursuit-glow' : 'border-cyan-500/40'
+            stats.policeActive ? 'border-red-500' : 'border-cyan-500/40'
           }`}
         >
           {/* Speedometer + Level */}
@@ -99,20 +94,6 @@ export const HUD: React.FC<HUDProps> = ({
                     {stats.combo.toFixed(1)}x
                   </span>
                 )}
-              </div>
-            </div>
-          </div>
-
-          {/* Dynamic Weather Badge */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80">
-            {renderWeatherIcon()}
-            <div className="text-left font-mono leading-tight">
-              <div className="text-[9px] font-bold text-amber-300 truncate max-w-[100px]">
-                {stats.weather.name}
-              </div>
-              <div className="text-[9px] text-cyan-300 tabular-nums">
-                গ্রিপ {Math.round(stats.weather.gripFactor * 100)}%
-                {stats.weather.bonusMultiplier > 1 ? ` · ${stats.weather.bonusMultiplier}x` : ''}
               </div>
             </div>
           </div>
@@ -196,26 +177,12 @@ export const HUD: React.FC<HUDProps> = ({
           )}
         </div>
 
-        {/* Non-blocking Alerts: Police Pursuit & Weather Warning */}
+        {/* Non-blocking Alert: Police Pursuit */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           {stats.policeActive && (
             <div className="px-3 py-1.5 rounded-xl bg-red-950/95 border border-red-500 text-red-200 font-mono text-[11px] font-bold flex items-center gap-2 shadow-lg">
               <Siren className="w-4 h-4 text-red-400" />
               <span>পুলিশ ধাওয়া করছে! সাবধানে লেন বদলান ও গতি নিয়ন্ত্রণ করুন!</span>
-            </div>
-          )}
-
-          {stats.weatherAlert && (
-            <div
-              className={`px-3.5 py-1.5 rounded-xl bg-gradient-to-r ${stats.weatherAlert.color} border border-white/40 shadow-lg flex items-center gap-2`}
-            >
-              <span className="text-base shrink-0">{stats.weatherAlert.icon}</span>
-              <div className="text-left font-mono leading-tight">
-                <div className="text-[11px] font-black text-white">{stats.weatherAlert.title}</div>
-                <div className="text-[9px] font-semibold text-white/90">
-                  {stats.weatherAlert.subtitle}
-                </div>
-              </div>
             </div>
           )}
         </div>

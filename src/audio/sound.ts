@@ -409,28 +409,6 @@ class TycoonAudioSystem {
     }
   }
 
-  public playWeatherAlert(type: string) {
-    this.init();
-    if (this.isMuted || !this.ctx) return;
-    try {
-      if (type === 'rain') {
-        this.tone(140, 0.4, 'sawtooth', 0.15);
-        setTimeout(() => this.tone(90, 0.6, 'triangle', 0.2), 120);
-      } else if (type === 'fog') {
-        this.tone(110, 0.8, 'sine', 0.18);
-        setTimeout(() => this.tone(165, 0.6, 'triangle', 0.14), 180);
-      } else if (type === 'neon_snow') {
-        [587.33, 880, 1174.66, 1760].forEach((freq, idx) => {
-          setTimeout(() => this.tone(freq, 0.22, 'sine', 0.12), idx * 80);
-        });
-      } else {
-        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
-          setTimeout(() => this.tone(freq, 0.18, 'triangle', 0.14), idx * 70);
-        });
-      }
-    } catch {}
-  }
-
   // --- POLICE ESCORT POWER-UP AUDIO ---
   public playPoliceEscortPowerUp() {
     this.init();

@@ -182,7 +182,7 @@ export function validateRunOutcome(params: {
 
   const safeSpeed = Math.max(0, Math.min(Math.floor(params.maxSpeed || 0), theoreticalMaxSpeed));
   const mult = 1 + Math.max(0, (params.multiplierLevel || 1) - 1) * 0.25;
-  const maxTheoreticalCash = Math.round((safeDist * 2.4 + safeMisses * 650 + 25000) * mult);
+  const maxTheoreticalCash = Math.round((safeDist * 0.5 + safeMisses * 220 + 6000) * mult);
   const safeCash = sanitizeCash(params.earnedCash, maxTheoreticalCash);
 
   const maxTheoreticalScore = Math.round(safeDist * 18 + safeMisses * 3200 + 15000);

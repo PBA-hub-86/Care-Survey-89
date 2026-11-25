@@ -1,16 +1,18 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Flame } from 'lucide-react';
 
 interface MobileControlsProps {
   onMoveLeft: () => void;
   onMoveRight: () => void;
   onSetBoost: (boosting: boolean) => void;
+  onSetBrake: (braking: boolean) => void;
 }
 
 export const MobileControls: React.FC<MobileControlsProps> = ({
   onMoveLeft,
   onMoveRight,
   onSetBoost,
+  onSetBrake,
 }) => {
   return (
     <div
@@ -46,8 +48,24 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         </button>
       </div>
 
-      {/* Big Nitro Boost Button */}
-      <div className="pointer-events-auto">
+      {/* Brake & Nitro Boost Pedals */}
+      <div className="flex items-end gap-3 pointer-events-auto">
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            onSetBrake(true);
+          }}
+          onPointerUp={() => onSetBrake(false)}
+          onPointerLeave={() => onSetBrake(false)}
+          onPointerCancel={() => onSetBrake(false)}
+          className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#1a050bdd] border-2 border-red-500/80 text-red-300 flex flex-col items-center justify-center shadow-[0_0_18px_rgba(239,68,68,0.3)] active:scale-95 active:bg-red-950 transition-transform cursor-pointer"
+          aria-label="Apply Brake"
+        >
+          <ChevronDown className="w-7 h-7 text-red-400" />
+          <span className="text-[9px] font-mono font-bold uppercase">ব্রেক</span>
+        </button>
+
         <button
           type="button"
           onPointerDown={(e) => {
@@ -57,10 +75,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
           onPointerUp={() => onSetBoost(false)}
           onPointerLeave={() => onSetBoost(false)}
           onPointerCancel={() => onSetBoost(false)}
-          className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-cyan-500 via-purple-600 to-pink-500 border-2 border-white text-white flex flex-col items-center justify-center shadow-[0_0_35px_rgba(168,85,247,0.6)] active:scale-95 transition-transform cursor-pointer"
+          className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-cyan-500 via-purple-600 to-pink-500 border-2 border-white text-white flex flex-col items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.5)] active:scale-95 transition-transform cursor-pointer"
           aria-label="Engage Nitro Boost"
         >
-          <Flame className="w-7 h-7 sm:w-8 sm:h-8 animate-pulse text-amber-200" />
+          <Flame className="w-7 h-7 sm:w-8 sm:h-8 text-amber-200" />
           <span className="text-[10px] sm:text-xs font-mono font-black tracking-wider uppercase mt-0.5">
             নাইট্রো
           </span>

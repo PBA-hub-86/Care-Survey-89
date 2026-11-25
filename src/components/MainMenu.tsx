@@ -368,8 +368,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         {/* Control Tips */}
         <div className="text-[10px] text-slate-400 font-mono leading-relaxed">
           🕹️ <span className="text-slate-200">A/D বা ◀▶:</span> লেন পরিবর্তন ·{' '}
-          <span className="text-cyan-300">W/▲:</span> নাইট্রো বুস্ট ·{' '}
-          <span className="text-slate-200">R:</span> রেডিও চ্যানেল
+          <span className="text-cyan-300">W/▲:</span> নাইট্রো ·{' '}
+          <span className="text-red-300">S/▼:</span> ব্রেক ·{' '}
+          <span className="text-slate-200">R:</span> রেডিও
         </div>
       </div>
     </div>

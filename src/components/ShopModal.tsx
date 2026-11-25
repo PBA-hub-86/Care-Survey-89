@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { CarConfig, RoadTheme, GlobalUpgrades } from '../types/game';
 import { UPGRADE_TIERS } from '../data/cars';
 import { sound } from '../audio/sound';
-import confetti from 'canvas-confetti';
 import {
   X,
   Car,
@@ -82,16 +81,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const handlePrevCar = () => {
     sound.tone(320, 0.05);
     setActiveCarIdx((prev) => (prev - 1 + cars.length) % cars.length);
-  };
-
-  const triggerConfetti = () => {
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-      });
-    } catch {}
   };
 
   return (
@@ -325,7 +314,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                         if (balance >= curCar.priceTaka) {
                           onBuyCar(activeCarIdx);
                           sound.playBuySuccess();
-                          triggerConfetti();
                         } else {
                           sound.tone(180, 0.15, 'sawtooth');
                         }
@@ -463,7 +451,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             if (canAfford) {
                               onBuyRoad(idx);
                               sound.playBuySuccess();
-                              triggerConfetti();
                             } else {
                               sound.tone(180, 0.15, 'sawtooth');
                             }
@@ -522,7 +509,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     key: 'shieldLevel' as keyof GlobalUpgrades,
                     tiers: UPGRADE_TIERS.shield,
                     title: 'হ্যান্ডলিং গ্রিপ ও সাসপেনশন',
-                    desc: 'বৃষ্টি ও তুষারে স্কিড কমায় এবং দ্রুত লেন পরিবর্তনে সাহায্য করে।',
+                    desc: 'হাই-স্পিড কর্নারে গ্রিপ বাড়ায় এবং দ্রুত লেন পরিবর্তনে সাহায্য করে।',
                     icon: <Shield className="w-5 h-5 text-blue-400" />,
                     border: 'border-blue-500/30',
                     pill: 'bg-blue-500/20 text-blue-300',
@@ -602,7 +589,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                               if (canAfford) {
                                 onUpgrade(item.key);
                                 sound.playBuySuccess();
-                                triggerConfetti();
                               } else {
                                 sound.tone(180, 0.15, 'sawtooth');
                               }
@@ -686,7 +672,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                               if (canAfford) {
                                 onBuyUnderglow(item.color, item.price);
                                 sound.playBuySuccess();
-                                triggerConfetti();
                               } else {
                                 sound.tone(180, 0.15, 'sawtooth');
                               }
